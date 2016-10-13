@@ -1,1 +1,1 @@
-# DF
+# Julia Complex Networks Library
