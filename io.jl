@@ -70,8 +70,8 @@ end
 function load_mgs1_graph_index{T<:Unsigned}(ipos::OrderedDict{T,T},filename::String)
 	f = open(filename, "r")
 	while !eof(f1)
-		id = read(f,Uint8,sizeof(T))
-		pos = read(f,Uint8,sizeof(T))
+		id = read(f,UInt8,sizeof(T))
+		pos = read(f,UInt8,sizeof(T))
 		# Julia is 1-based -> +1
 		ipos[reinterpret(T,reverse(id))[1]] = reinterpret(T,reverse(pos))[1] + 1
 	end
@@ -82,7 +82,7 @@ end
 function load_mgs2_graph_index{T<:Unsigned}(pos::Array{T,1},filename::String)
 	f = open(filename, "r")
 	while !eof(f)
-		p = read(f,Uint8,sizeof(T))
+		p = read(f,UInt8,sizeof(T))
 		push!(pos, reinterpret(T,reverse(p))[1])
 	end
 	close(f)
@@ -93,7 +93,7 @@ function write_mgs1_graph_index{T<:Unsigned}(ipos::OrderedDict{T,T}, filename::S
 	f = open(filename, "w")
 	for p in ipos
     # reinterpret pair (vid,pos) in an array of bytes
-		bytes = reinterpret(Uint8, [p])
+		bytes = reinterpret(UInt8, [p])
 		write(f, reverse(bytes))
 	end
 	close(f)
@@ -104,7 +104,7 @@ function write_mgs2_graph_index{T<:Unsigned}(pos::Array{T,1}, filename::String)
 	f = open(filename, "w")
 	for p in pos
     # reinterpret pos in an array of bytes
-		bytes = reinterpret(Uint8, [p])
+		bytes = reinterpret(UInt8, [p])
 		write(f, reverse(bytes))
 	end
 	close(f)
@@ -114,7 +114,7 @@ end
 function load_graph_data{T<:Unsigned}(children::Array{T,1},filename::String)
 	f = open(filename, "r")
 	while !eof(f)
-		child = read(f,Uint8,sizeof(T))
+		child = read(f,UInt8,sizeof(T))
 		push!(children,reinterpret(T,reverse(child))[1])
 	end
 	close(f)
@@ -124,7 +124,7 @@ end
 function write_graph_data{T<:Unsigned}(children::Array{T,1}, filename::String)
 	f = open(filename, "w")
 	for c in children
-		bytes = reinterpret(Uint8, [c])
+		bytes = reinterpret(UInt8, [c])
 		write(f, reverse(bytes))
 	end
 	close(f)
@@ -177,23 +177,102 @@ function load_mgs1_graph{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array
 end
 
 # load graph in format MGS v3
-function write_mgs3_graph{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},name::String)
-  # 8 bytes string + 4 bytes position: 'MGSv3   ' +  <32bits pos>
-  version = 0x4d47537633202020
+function write_mgs3_graph{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, filename::String)
+  	# 12 bytes: 7 bytes string + 1 byte + 4 bytes position ('MGSv3  ' + <8bits T size> +  <32bits offset of data section>)
+  	version = 0x4d475376332020
+	# size of type T in bytes
+	size_t = convert(UInt8, sizeof(T))
 
-  vs = vertices(g)
+	pos = T[]
+	children = T[]
+	vs = vertices(g)
+	cpos = convert(T,1)
+	for v in vs
+		ovs = out_neighbors(v,g)
+		push!(pos,cpos)
+		for o in ovs
+			push!(children,ovs)	
+			cpos += convert(T,1)
+		end
+	end
 
-  for v in vs
+	# number of vertices
+	gs = convert(UInt32, length(vs))
 
-  end
+	f = open("$filename.mgs", "w")
+	# write header
+	bytes = reinterpret(UInt8, [version])
+	write(f, bytes)
+	bytes = reinterpret(UInt8, [size_t])
+	write(f, bytes)
+	bytes = reinterpret(UInt8, [gs])
+	write(f, bytes)
+	# write index section
+	for p in pos
+		bytes = reinterpret(UInt8, [p])
+		write(f, bytes)
+	end
+	# write data section
+	for c in children
+		bytes = reinterpret(UInt8, [c])
+		write(f, bytes)
+	end
+	close(f)
+end
+
+# load graph in format MGS v3
+function load_mgs3_graph{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, filename::String)
+	f = open(filename, "r")
+	# read header
+	version = read(f,UInt8,7)
+	size_t = convert(UInt8, read(f,UInt8,1))
+	gs = convert(UInt32, read(f,UInt8,4))
+	# read index
+	pos = T[]
+	for i in 1:gs
+		p = read(f,UInt8,sizeof(T))
+		push!(pos,reinterpret(T,p)[1])
+	end
+	# read data
+	children = T[]
+	while !eof(f)
+		c = read(f,UInt8,sizeof(T))
+		push!(children, reinterpret(T,c)[1])
+	end
+	close(f)
+	
+	# vertex set
+	vs = range(1,length(pos))
+
+	# add vertices
+	for i in 1:length(vs)
+        	add_vertex!(g,convert(T,i))
+	end
+
+	# add edges
+	for i in 1:length(vs)
+		source = convert(T,i)
+		# if we reached the last parent vertex
+		if i == length(vs)
+			pos1 = pos[i]
+			pos2 = length(children)
+		else
+			pos1 = pos[i]
+			pos2 = pos[i+1]-1
+		end
+		for p in pos1:pos2
+			target = children[p]
+			add_edge!(g,source,target)
+		end
+	end
 end
 
 # load graph in format MGS v2
 function load_mgs2_graph{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},name::String)
-  pos = T[]
-  children = T[]
+	pos = T[]
+	children = T[]
 
-  load_mgs2_graph_index(pos,"$name.index")
+	load_mgs2_graph_index(pos,"$name.index")
 	load_graph_data(children,"$name.data")
 
 	#@debug("#pos:",length(pos))
