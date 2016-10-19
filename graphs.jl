@@ -15,6 +15,8 @@
 
 using Graphs, DataStructures, Logging
 
+@Logging.configure(level=DEBUG)
+
 ###
 # Basic stats for directed graphs
 ###
@@ -310,7 +312,7 @@ end
 # nb_steps: number of points used to compute p_avg
 #
 # NB: to get the avg in-degree of visited nodes, one can use the reverse graph of g
-function get_avg_out_degree{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, visited::Array{T,1}, p_avg::Float64=float64(-1), np_steps::Uint64=uint64(0))
+function get_avg_out_degree{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, visited::Array{T,1}, p_avg::Float64=float64(-1), np_steps::UInt64=uint64(0))
 	sum = float64(0)
 	for v in visited
 		sum += length(out_neighbors(v,g))
