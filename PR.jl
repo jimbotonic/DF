@@ -13,12 +13,21 @@
 # GNU General Public License for more details.
 #
 
-using Graphs, DataStructures, Logging
+include("RW.jl")
 
-# naïve implementation of Pagerank algorithm
-function my_pagerank{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},pr::Array{Float64,1},damping::Float64=0.85,epsilon::Float64=1e-4)
+using Graphs, DataStructures, Logging, Distances
+
+# simple implementation of Pagerank algorithm
+function PR{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, init_pr::Array{Float64,1}=Float64[], damping::Float64=0.85, epsilon::Float64=1e-4)
 	vs = vertices(g)
 	n = length(vs)
+	@debug("computing Pagerank (size of graph $n)")
+	# initialize pagerank vector
+	if length(init_pr) == n
+		pr = init_pr
+	else
+		pr = Float64[1/n for k in vs]
+	end
 	pr2 = copy(pr)
 	while true
 		for v in vs
@@ -32,25 +41,32 @@ function my_pagerank{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Arr
 			end
 			pr2[v] = (1-damping)/n+damping*nv
 		end
-		d = dist(pr,pr2)
+		d = chebyshev(pr,pr2)
 		pr = copy(pr2)
 		d <= epsilon && break
 	end
 	return pr
 end
 
-function my_pagerank2{T<:Unsigned}(rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},out_degrees::Array{T,1},damping::Float64=0.85,epsilon::Float64=1e-4,save_pr::Bool=False,init_pr=None)
+# simple implementation of Pagerank algorithm
+#
+# specifically designed for large graphs
+function PR{T<:Unsigned}(rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, out_degrees::Array{T,1}, init_pr::Array{Float64,1}=Float64[], damping::Float64=0.85, epsilon::Float64=1e-4, save_pr::Bool=False)
 	vs = vertices(rg)
 	n = length(vs)
-	@debug("computing pagerank (size of graph $n)")
+	@debug("computing Pagerank (size of graph $n)")
 	# initialize pagerank vector
-	if init_pr == None
-		pr = [float64(1/n) for k in vs]
-	else
+	# initialize pagerank vector
+	if length(init_pr) == n
 		pr = init_pr
+	else
+		pr = Float64[1/n for k in vs]
 	end
-	pr2 = copy(pr)
+	pr2 = copy(pr)	
+	# iteration number
 	ic = 1
+	# progression
+	thp = ceil(Int,n/100)
 	while true
 		for v in vs
 			nv = 0.
@@ -62,13 +78,14 @@ function my_pagerank2{T<:Unsigned}(rg::GenericAdjacencyList{T,Array{T,1},Array{A
 				end
 			end
 			pr2[v] = (1-damping)/n+damping*nv
-			if v % 100000 == 0
-				@debug("iteration $ic: ", (v/n)*100, " %")
+			if v % thp == 0
+				# log progression
+				@info("iteration $ic: ", (v/n)*100, " %")
 			end
 		end
-		d = dist(pr,pr2)
+		d = chebyshev(pr,pr2)
 		pr = copy(pr2)
-		@debug("distance(t,t+1) = $d")
+		@info("distance(t,t+1) = $d")
 		if save_pr
 			serialize_to_file(pr, "pr-iter-$ic.jld")
 		end
@@ -79,9 +96,10 @@ function my_pagerank2{T<:Unsigned}(rg::GenericAdjacencyList{T,Array{T,1},Array{A
 end
 
 # naïve implementation of personalized Pagerank with a single source vertex
-function my_personalized_pagerank{T<:Unsigned}(src::T,g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},damping::Float64=0.85,epsilon::Float64=1e-4)
+function personalized_PR{T<:Unsigned}(src::T, g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, damping::Float64=0.85, epsilon::Float64=1e-4)
 	vs = vertices(g)
 	n = length(vs)
+	@debug("computing personalized Pagerank (size of graph $n, source $src)")
 	# initialize pagerank vector
 	pr = [0. for k in vs]
 	pr[src] = 1.
@@ -102,9 +120,27 @@ function my_personalized_pagerank{T<:Unsigned}(src::T,g::GenericAdjacencyList{T,
 				pr2[v] = damping*nv
 			end
 		end
-		d = dist(pr,pr2)
+		d = chebyshev(pr,pr2)
 		pr = copy(pr2)
 		d <= epsilon && break
 	end
 	return pr
+end
+
+
+# Monte-Carlo Pagerank algorithm
+#
+# MC Pagerank with cyclic start of complete path stopping at sink nodes
+# http://www-sop.inria.fr/members/Konstantin.Avratchenkov/pubs/mc.pdf
+function MC_PR{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, n_cycles::Int, damping::Float64=0.85, epsilon::Float64=1e-4)
+	vs = vertices(g)
+	n = length(vs)
+	vv = zeros(Float64, n)
+	@debug("computing Monte-Carlo Pagerank (size of graph $n)")
+	for i in 1:n_cycles
+		for v in vs
+			vv += RW_aggregated(g, (1-damping), v)
+		end
+	end
+	return vv/sum(vv)
 end

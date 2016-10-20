@@ -20,7 +20,7 @@ using Graphs
 # proceeds for n_steps starting from the specified vertex id
 #
 # @return the list of visited nodes
-function RW{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, n_steps::Uint64, starting_v::T=convert(T,1))
+function RW{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, n_steps::UInt64, starting_v::T=convert(T,1))
 	visited_nodes =  T[]
 	v = starting_v
 	for i in 1:n_steps
@@ -43,7 +43,7 @@ function RW_aggregated{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{A
 	vv[v] = 1
 	while rand() > jumping_constant
 		nei = out_neighbors(v,g)
-		lenght(nei) == 0 && break
+		length(nei) == 0 && break
 		nv = nei[rand(1:length(nei))]
 		vv[nv] += 1
 		v = nv
@@ -141,7 +141,7 @@ end
 #
 # @input rd: stochastic repulsive vector
 # @return an array vid position -> # visits
-function ARW_flying{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, n_steps::Uint64, rd::Array{Float64,1}, starting_v::T=convert(T,1))
+function ARW_flying{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, n_steps::UInt64, rd::Array{Float64,1}, starting_v::T=convert(T,1))
 	visited_nodes =  T[]
 	v = starting_v
 	push!(visited_nodes,v)
@@ -168,7 +168,7 @@ end
 # NB: but in the case of directed graphs, the strategy to adopt is less clear
 #
 # @return an array vid position -> # visits
-function MHRW{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, n_steps::Uint64, in_degrees::Array{T,1}, out_degrees::Array{T,1},starting_v::T=convert(T,1))
+function MHRW{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, n_steps::UInt64, in_degrees::Array{T,1}, out_degrees::Array{T,1},starting_v::T=convert(T,1))
 	visited_nodes =  T[]
 	v = starting_v
 	push!(visited_nodes,v)
@@ -201,7 +201,7 @@ end
 # Metropolis-Hasting Random Walk (flying mode)
 #
 # @return an array vid position -> # visits
-function MHRW_flying{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, n_steps::Uint64, in_degrees::Array{T,1}, out_degrees::Array{T,1},starting_v::T=convert(T,1))
+function MHRW_flying{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, n_steps::UInt64, in_degrees::Array{T,1}, out_degrees::Array{T,1},starting_v::T=convert(T,1))
 	visited_nodes =  T[]
 	v = starting_v
 	push!(visited_nodes,v)
