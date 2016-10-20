@@ -16,6 +16,9 @@
 using Graphs
 
 # Random Walk
+#
+# proceeds for n_steps starting from the specified vertex id
+#
 # @return the list of visited nodes
 function RW{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, n_steps::Uint64, starting_v::T=convert(T,1))
 	visited_nodes =  T[]
@@ -30,9 +33,31 @@ function RW{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1
 end
 
 # Random Walk
+#
+# proceeds until a sink node is reached or if rand()>jumping_constant from the specified vertex id
+#
 # @return an array vid position -> # visits
-function RW_aggregated{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, n_steps::Uint64, starting_v::T=convert(T,1))
-	vv =  zeros(Uint32,length(vertices(g)))
+function RW_aggregated{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, jumping_constant::Float64, starting_v::T=convert(T,1))
+	vv =  zeros(UInt32,length(vertices(g)))
+	v = starting_v
+	vv[v] = 1
+	while rand() > jumping_constant
+		nei = out_neighbors(v,g)
+		lenght(nei) == 0 && break
+		nv = nei[rand(1:length(nei))]
+		vv[nv] += 1
+		v = nv
+	end
+	return vv
+end
+
+# Random Walk
+#
+# proceeds for n_steps starting from the specified vertex id
+#
+# @return an array vid position -> # visits
+function RW_aggregated{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, n_steps::UInt64, starting_v::T=convert(T,1))
+	vv =  zeros(UInt32,length(vertices(g)))
 	v = starting_v
 	vv[v] = 1
 	for i in 1:n_steps
@@ -45,7 +70,11 @@ function RW_aggregated{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{A
 end
 
 # Uniform sampling
-function US{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, n_steps::Uint64)
+#
+# proceeds for n_steps 
+#
+# @return the list of sampled vertices
+function US{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, n_steps::UInt64)
 	visited_nodes =  T[]
 	n = length(vertices(g))
 	for i in 1:n_steps
@@ -55,10 +84,12 @@ function US{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1
 	return visited_nodes
 end
 
-# get the flying index
+# get the flying index (select a child with a probability equals to its score)
+#
+# @input array of child scores
 function get_flying_index(a::Array{Float64,1})
 	r = rand()
-	sum = 0
+	sum = 0.
 	pos = 1
 	for i in a
 		p_sum = sum
@@ -75,7 +106,7 @@ end
 #
 # rd: stochastic repulsive vector
 # @return an array vid position -> # visits
-function ARW{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, n_steps::Uint64, rd::Array{Float64,1}, starting_v::T=convert(T,1))
+function ARW{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, n_steps::UInt64, rd::Array{Float64,1}, starting_v::T=convert(T,1))
 	visited_nodes =  T[]
 	v = starting_v
 	push!(visited_nodes,v)
@@ -83,8 +114,10 @@ function ARW{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},
 	for i in 1:n_steps
 		nei = out_neighbors(v,g)
 		if length(nei) > 1
+			# select a child randomly
 			rpos = rand(1:length(nei))
 			pv = nei[rpos]
+			# compute the repulsive score (higher if selected child is less repulsive than current node)
 			score = rd[v]/rd[pv]
 			if rand() <= score
 				push!(visited_nodes,pv)
@@ -93,6 +126,7 @@ function ARW{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},
 				rejected += 1
 			end
 		else
+			# if there is only one child, follow the link
 			pv = nei[1]
 			push!(visited_nodes,pv)
 			v = pv
@@ -103,7 +137,9 @@ end
 
 # Avoiding Random Walk (flying mode)
 #
-# rd: stochastic repulsive vector
+# NB: flying mode avoids to get stuck at a given node and thus to sample nodes more efficiently
+#
+# @input rd: stochastic repulsive vector
 # @return an array vid position -> # visits
 function ARW_flying{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, n_steps::Uint64, rd::Array{Float64,1}, starting_v::T=convert(T,1))
 	visited_nodes =  T[]
@@ -112,11 +148,12 @@ function ARW_flying{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Arra
 	for i in 1:n_steps
 		nei = out_neighbors(v,g)
 		if length(nei) > 1
-			# compute scores of neighbors
+			# compute repulsive scores of neighbors
 			scores = stochastic([rd[v]/rd[i] for i in nei])
 			pos = get_flying_index(scores)
 			pv = nei[pos]
 		else
+			# if there is only one child, follow the link
 			pv = nei[1]
 		end
 		push!(visited_nodes,pv)
@@ -127,7 +164,9 @@ end
 
 # Metropolis-Hasting Random Walk
 #
-# rd: stochastic repulsive vector
+# NB: in the case of undirected graphs, MHRW corrects the sampling bias by avoiding high degree nodes
+# NB: but in the case of directed graphs, the strategy to adopt is less clear
+#
 # @return an array vid position -> # visits
 function MHRW{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, n_steps::Uint64, in_degrees::Array{T,1}, out_degrees::Array{T,1},starting_v::T=convert(T,1))
 	visited_nodes =  T[]
@@ -161,7 +200,6 @@ end
 
 # Metropolis-Hasting Random Walk (flying mode)
 #
-# rd: stochastic repulsive vector
 # @return an array vid position -> # visits
 function MHRW_flying{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, n_steps::Uint64, in_degrees::Array{T,1}, out_degrees::Array{T,1},starting_v::T=convert(T,1))
 	visited_nodes =  T[]
@@ -190,7 +228,7 @@ end
 # RW in flying mode guided by the colink (C1C) or clustering (C2C) coefficient
 #
 # Twitter dataset: nchains: 100, burning_time: 100, nsteps: 5000
-function CC_MHRW_flying{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, n_steps::Uint64, ccs::Array{Float64,1}, starting_v::T=convert(T,1))
+function CC_MHRW_flying{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, n_steps::UInt64, ccs::Array{Float64,1}, starting_v::T=convert(T,1))
 	visited_nodes =  T[]
 	v = starting_v
 	push!(visited_nodes,v)
