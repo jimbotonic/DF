@@ -18,10 +18,10 @@ include("RW.jl")
 using Graphs, DataStructures, Logging, Distances
 
 # simple implementation of Pagerank algorithm
-function PR{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, init_pr::Array{Float64,1}=Float64[], damping::Float64=0.85, epsilon::Float64=1e-4)
+function PR{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}; init_pr::Array{Float64,1}=Float64[], damping::Float64=0.85, epsilon::Float64=1e-4)
 	vs = vertices(g)
 	n = length(vs)
-	@debug("computing Pagerank (size of graph $n)")
+	@info("computing Pagerank (size of graph $n)")
 	# initialize pagerank vector
 	if length(init_pr) == n
 		pr = init_pr
@@ -51,10 +51,10 @@ end
 # simple implementation of Pagerank algorithm
 #
 # specifically designed for large graphs
-function PR{T<:Unsigned}(rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, out_degrees::Array{T,1}, init_pr::Array{Float64,1}=Float64[], damping::Float64=0.85, epsilon::Float64=1e-4, save_pr::Bool=False)
+function PR{T<:Unsigned}(rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, out_degrees::Array{T,1}; init_pr::Array{Float64,1}=Float64[], damping::Float64=0.85, epsilon::Float64=1e-4, save_pr::Bool=False)
 	vs = vertices(rg)
 	n = length(vs)
-	@debug("computing Pagerank (size of graph $n)")
+	@info("computing Pagerank (size of graph $n)")
 	# initialize pagerank vector
 	# initialize pagerank vector
 	if length(init_pr) == n
@@ -96,10 +96,10 @@ function PR{T<:Unsigned}(rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},
 end
 
 # naïve implementation of personalized Pagerank with a single source vertex
-function personalized_PR{T<:Unsigned}(src::T, g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, damping::Float64=0.85, epsilon::Float64=1e-4)
+function personalized_PR{T<:Unsigned}(src::T, g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}; damping::Float64=0.85, epsilon::Float64=1e-4)
 	vs = vertices(g)
 	n = length(vs)
-	@debug("computing personalized Pagerank (size of graph $n, source $src)")
+	@info("computing personalized Pagerank (size of graph $n, source $src)")
 	# initialize pagerank vector
 	pr = [0. for k in vs]
 	pr[src] = 1.
@@ -132,11 +132,11 @@ end
 #
 # MC Pagerank with cyclic start of complete path stopping at sink nodes
 # http://www-sop.inria.fr/members/Konstantin.Avratchenkov/pubs/mc.pdf
-function MC_PR{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, n_cycles::Int, damping::Float64=0.85, epsilon::Float64=1e-4)
+function MC_PR{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, n_cycles::Int; damping::Float64=0.85, epsilon::Float64=1e-4)
 	vs = vertices(g)
 	n = length(vs)
 	vv = zeros(Float64, n)
-	@debug("computing Monte-Carlo Pagerank (size of graph $n)")
+	@info("computing Monte-Carlo Pagerank (size of graph $n)")
 	for i in 1:n_cycles
 		for v in vs
 			vv += RW_aggregated(g, (1-damping), v)

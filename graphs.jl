@@ -15,6 +15,8 @@
 
 using Graphs, DataStructures, Logging
 
+include("algorithms.jl")
+
 @Logging.configure(level=DEBUG)
 
 ###
@@ -186,6 +188,8 @@ function subgraph_streamed{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Arr
 end
 
 # get the main SCC
+#
+# @returns ng (core subgraph), oni (old->new vertex indices), noi (new->old vertex indices)
 function get_core{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}})
 	sccs = pearce_iterative(g)
 	scc_ids = union(sccs,[])
@@ -220,6 +224,7 @@ function get_core{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{
 
 	return subgraph(g,sids)
 end
+
 # get the main SCC and write it to the specified file (MGS format)
 # write the subgraph in MGS format v2
 function get_core_streamed{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},sccs::Array{T,1},name::String)
@@ -257,6 +262,8 @@ function get_core_streamed{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Arr
 end
 
 # get the reverse graph (same graph with all edge directions reversed)
+#
+# @returns reversed graph
 function get_reverse_graph{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}})
 	ng = adjlist(T, is_directed=true)
 	vs = vertices(g)
@@ -278,7 +285,8 @@ function get_reverse_graph{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Arr
 end
 
 # get in-degree of g vertices
-# returns a dictionary (vertex_id -> in-degree)
+#
+# @returns dictionary (vertex_id -> in-degree)
 function get_vertex_in_degrees{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}})
 	vin = Dict{T,T}()
 	for v in vertices(g)

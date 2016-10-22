@@ -46,7 +46,7 @@ end
 
 # serialize data to JLS format
 function serialize_to_jls(x, filename::AbstractString)
-	open(filename, "w") do file
+	open("$filename.jls", "w") do file
 		serialize(file, x)
 	end
 end
@@ -59,9 +59,9 @@ function load_jld_serialized(name::AbstractString, filename::AbstractString)
 	return x
 end
 
-# serialize data to JLS format
+# serialize data to JLD format
 function serialize_to_jld(x, name::AbstractString, filename::AbstractString)
-	jldopen(filename, "w") do file
+	jldopen("$filename.jld", "w") do file
 		write(file, name, x)
 	end
 end
