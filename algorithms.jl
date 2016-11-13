@@ -180,3 +180,4 @@ function pearce_iterative{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Arra
 
 	return rindex
 end
+
