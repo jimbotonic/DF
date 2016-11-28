@@ -45,7 +45,7 @@ function load_jls_serialized(filename::AbstractString)
 end
 
 # serialize data to JLS format
-function serialize_to_jls(x, filename::AbstractString)
+function serialize_to_jls(x::Any, filename::AbstractString)
 	open("$filename.jls", "w") do file
 		serialize(file, x)
 	end
@@ -53,14 +53,14 @@ end
 
 # load serialized JLD data
 function load_jld_serialized(name::AbstractString, filename::AbstractString)
-  x = jldopen(filename, "r") do file
-    read(file, name)
-  end
+	x = jldopen(filename, "r") do file
+    		read(file, name)
+  	end
 	return x
 end
 
 # serialize data to JLD format
-function serialize_to_jld(x, name::AbstractString, filename::AbstractString)
+function serialize_to_jld(x::Any, name::AbstractString, filename::AbstractString)
 	jldopen("$filename.jld", "w") do file
 		write(file, name, x)
 	end
@@ -215,7 +215,7 @@ end
 
 # load graph in format MGS v3
 function write_mgs3_graph{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, filename::AbstractString)
-  	# 12 bytes: 7 bytes string + 1 byte + 4 bytes position ('MGSv3  ' + <8bits T size> +  <32bits offset of data section>)
+  	# 12 bytes: 7 bytes string + 1 byte + 4 bytes position ('MGSv3  ' + <8bits T size> +  <32bits offset in size_t of data section>)
   	version = 0x4d475376332020
 	# size of type T in bytes
 	size_t = convert(UInt8, sizeof(T))
@@ -238,7 +238,7 @@ function write_mgs3_graph{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Arra
 
 	f = open("$filename.mgs", "w")
 	### write header
-	# reinterpret generates an array of length 8 even if version has a length of 7 bytes
+	# NB: reinterpret generates an array of length 8 even if version has a length of 7 bytes
 	bytes = reinterpret(UInt8, [version])[1:7]
 	write(f, bytes)
 	bytes = reinterpret(UInt8, [size_t])
@@ -306,6 +306,64 @@ function load_mgs3_graph{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array
 			add_edge!(g,source,target)
 		end
 	end
+end
+
+# load graph in format MGS v4
+function write_mgs4_graph{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, filename::AbstractString)
+  	# 12 bytes: 7 bytes string + 1 byte + 4 bytes position ('MGSv4  ' + <8bits T size>
+	# size of the tree structure section
+	# + <32bits size in bits of S section> 
+	# size of the tree data section 
+	# + <32bits size in site_t of D section> 
+	# + <32bits offset in size_t of graph data section>)
+  	version = 0x4d475376342020
+	# size of type T in bytes
+	size_t = convert(UInt8, sizeof(T))
+	
+	vs = vertices(g)
+	# offset of children 
+	pos = T[]
+	# array of children
+	children = T[]
+	# vertices in-degree
+	in_degrees = T[]
+	cpos = convert(T,1)
+	for v in vs
+		ovs = out_neighbors(v,g)
+		push!(pos,cpos)
+		push!(in_degress,length(out_neighbors(v,rg)))
+		for o in ovs
+			push!(children,o)	
+			cpos += convert(T,1)
+		end
+	end
+
+	# get Huffman encoding tree
+	tree = huffman_encoding(in_degrees)
+
+	# number of vertices
+	gs = convert(UInt32, length(vs))
+
+	f = open("$filename.mgs", "w")
+	### write header
+	# reinterpret generates an array of length 8 even if version has a length of 7 bytes
+	bytes = reinterpret(UInt8, [version])[1:7]
+	write(f, bytes)
+	bytes = reinterpret(UInt8, [size_t])
+	write(f, bytes)
+	bytes = reinterpret(UInt8, [gs])
+	write(f, bytes)
+	### write index section
+	for p in pos
+		bytes = reinterpret(UInt8, [p])
+		write(f, bytes)
+	end
+	### write data section
+	for c in children
+		bytes = reinterpret(UInt8, [c])
+		write(f, bytes)
+	end
+	close(f)
 end
 
 # load graph from CSV adjacency list

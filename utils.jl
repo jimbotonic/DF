@@ -13,7 +13,9 @@
 # GNU General Public License for more details.
 #
 
-using DataStructures
+using DataStructures, Logging
+
+@Logging.configure(level=DEBUG)
 
 ##### custom implementation of QuickSort
 function swap{T<:Integer}(A::Array{T,1},i::T,j::T)
@@ -25,10 +27,10 @@ end
 function partition{T<:Integer}(A::Array{T,1},R::Array{T,1},l::T,h::T)
 	pvalue = A[h]
 	sindex = l
-	for j in l:(h-1)
+	for j in l:(h-convert(T,1))
 		if A[j] < pvalue
 			(sindex != j && A[sindex] != A[j]) && begin swap(A,sindex,j); swap(R,sindex,j) end
-			sindex += 1
+			sindex += convert(T,1)
 		end
 	end
 	(sindex != h && A[sindex] != A[h]) && begin swap(A,sindex,h); swap(R,sindex,h) end
@@ -65,6 +67,7 @@ end
 # @returns permutation array R
 #
 # NB: to get the sorted array sA: sA[i] = A[R[i]] 
+#     R[i] is thus the index in the original array of element at new index i in the sorted array
 function bottom_up_sort{T<:Integer}(A::Array{T,1})
 	n = convert(T,length(A))
 	B = zeros(T,n)
@@ -176,17 +179,33 @@ end
 #
 # S: bits array
 # D: array of leaf node values 
-function encode_tree!{T}(root::Node{T}, S::BitArray{1} , D::Array{T,1})
+function encode_tree!{T}(root::AbstractNode, S::BitArray{1} , D::Array{T,1})
 	if root == EmptyNode
-        	push!(S,0)
+        	push!(S, 0)
         	return
 	else
-		push!(S,1)
-		push!(D,root.key)
+		push!(S, 1)
+		push!(D, root.key)
 		encode_tree!(root.left,S,D) 
 		encode_tree!(root.right,S,D) 
 	end
 end
+
+# get Huffman prefix codes dictionary
+#
+function get_huffman_codes!{T}(root::AbstractNode, C::Dict{BitArray{1},T}, S::BitArray{1})
+	if root.left == EmptyNode && root.right == EmptyNode
+        	C[S] = root.key
+	else
+		S0 = BitArray{1}()
+		push!(S0,false)
+		get_huffman_codes!(root.left, C, append!(S0,S)) 
+		S1 = BitArray{1}()
+		push!(S1,true)
+		get_huffman_codes!(root.right, C, append!(S1,S)) 
+	end
+end
+
 
 # decode binary tree
 #
@@ -207,58 +226,70 @@ end
 
 # @return huffman tree
 #
-# NB: A is assumed to have a length >= 2
+# A is assumed to have a length >= 2
+# A[i] is the value associated to element having index i (e.g. graph vertices)
 function huffman_encoding{T<:Unsigned}(A::Array{T,1})
 	# get sorted array in increasing order
-	# NB: instead of poping elements, we use unshift
+	# NB: instead of poping elements, we use shift
 	## merge sort 
 	#R = bottom_up_sort(A)	
 	#S = get_sorted_array(A,R)
 	## quick sort (A is sorted)
-	R = quicksort_iterative!(A)	
-	S = A
+	S = copy(A)
+	R = quicksort_iterative!(S)	
 	# second queue
-	N = Array{Node}()
-	V = Array{T}()
-	# initial tree
+	N = Array{Node,1}()
+	V = Array{T,1}()
+	V2 = Array{T,1}()
+	# creating initial tree
 	# NB: lowest node on the left
-	lKey = unshift!(S)
-	rKey = unshift!(S)
-	lNode = Node{T}(lKey,EmptyNode,EmptyNode)
-	rNode = Node{T}(rKey,EmptyNode,EmptyNode)
+	lKey = shift!(S)
+	rKey = shift!(S)
+	# get corresponding elements
+	lKey2 = shift!(R)
+	rKey2 = shift!(R)
+	lNode = Node{T}(lKey2,EmptyNode,EmptyNode)
+	rNode = Node{T}(rKey2,EmptyNode,EmptyNode)
 	nKey = lKey+rKey
-	nNode = Node{T}(nKey,lNode,rNode)
-	push!(N,nNode)
-	push!(V,nKey)
+	nKey2 = lKey2+rKey2
+	nNode = Node{T}(nKey2,lNode,rNode)
 	# NB: lenght(N) == 0 at the very end of the computation
 	while length(S) > 0 || length(N) > 0
+		# if some elements remain in the queues, insert latest node to the node queue
+		pos = searchsortedfirst(V,nKey)
+		insert!(V, pos, nKey)
+		insert!(V2, pos, nKey2)
+		insert!(N, pos, nNode)
 		# compare lowest values of both queues for node 1
 		if length(S) > 0 && S[1] <= V[1]
-			key1 = unshift!(S)
-			node1 = Node{T}(key1,EmptyNode,EmptyNode)
+			key1 = shift!(S)
+			key12 = shift!(R)
+			node1 = Node{T}(key12,EmptyNode,EmptyNode)
+			@debug("poping node 1 from S: ", key1)
 		else
-			key1 = unshift!(V)
-			node1 = unshift!(N)
+			key1 = shift!(V)
+			key12 = shift!(V2)
+			node1 = shift!(N)
+			@debug("poping node 1 from N: ", key1)
 		end
 		# compare lowest values of both queues for node 2
 		if length(S) > 0 && S[1] <= V[1]
-			key2 = unshift!(S)
-			node2 = Node{T}(key2,EmptyNode,EmptyNode)
+			key2 = shift!(S)
+			key22 = shift!(R)
+			node2 = Node{T}(key22,EmptyNode,EmptyNode)
+			@debug("poping node 2 from S: ", key2)
 		else
-			key2 = unshift!(V)
-			node2 = unshift!(N)
+			key2 = shift!(V)
+			key22 = shift!(V2)
+			node2 = shift!(N)
+			@debug("poping node 2 from N: ", key2)
 		end
 		nKey = key1+key2
+		nKey2 = key12+key22
 		if key1 > key2
-			nNode = Node{T}(nKey,node2,node1)
+			nNode = Node{T}(nKey2,node2,node1)
 		else
-			nNode = Node{T}(nKey,node1,node2)
-		end
-		# if the node list is not empty, insert new node to the node queue
-		if length(N) > 0
-			pos = searchsortedfirst(V,nKey)
-			insert!(V, pos, nKey)
-			insert!(N, pos, nNode)
+			nNode = Node{T}(nKey2,node1,node2)
 		end
 	end
 	return nNode
