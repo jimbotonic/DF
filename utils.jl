@@ -177,6 +177,7 @@ end
 
 # encode binary tree
 #
+# the tree is encoded in
 # S: bits array
 # D: array of leaf node values 
 function encode_tree!{T}(root::AbstractNode, S::BitArray{1} , D::Array{T,1})
@@ -193,6 +194,7 @@ end
 
 # get Huffman prefix codes dictionary
 #
+# C: dictionary (bitarray -> value::T)
 function get_huffman_codes!{T}(root::AbstractNode, C::Dict{BitArray{1},T}, S::BitArray{1})
 	if root.left == EmptyNode && root.right == EmptyNode
         	C[S] = root.key
@@ -205,7 +207,6 @@ function get_huffman_codes!{T}(root::AbstractNode, C::Dict{BitArray{1},T}, S::Bi
 		get_huffman_codes!(root.right, C, append!(S1,S)) 
 	end
 end
-
 
 # decode binary tree
 #
@@ -227,7 +228,7 @@ end
 # @return huffman tree
 #
 # A is assumed to have a length >= 2
-# A[i] is the value associated to element having index i (e.g. graph vertices)
+# A[i] is the value associated to element having index i (e.g. A[i] could be the in-degree of vertex i)
 function huffman_encoding{T<:Unsigned}(A::Array{T,1})
 	# get sorted array in increasing order
 	# NB: instead of poping elements, we use shift
@@ -265,24 +266,24 @@ function huffman_encoding{T<:Unsigned}(A::Array{T,1})
 			key1 = shift!(S)
 			key12 = shift!(R)
 			node1 = Node{T}(key12,EmptyNode,EmptyNode)
-			@debug("poping node 1 from S: ", key1)
+			@debug("poping node 1 from S: $key12 -> $key1")
 		else
 			key1 = shift!(V)
 			key12 = shift!(V2)
 			node1 = shift!(N)
-			@debug("poping node 1 from N: ", key1)
+			@debug("poping node 1 from N: $key12 -> $key1")
 		end
 		# compare lowest values of both queues for node 2
 		if length(S) > 0 && S[1] <= V[1]
 			key2 = shift!(S)
 			key22 = shift!(R)
 			node2 = Node{T}(key22,EmptyNode,EmptyNode)
-			@debug("poping node 2 from S: ", key2)
+			@debug("poping node 2 from S: $key22 -> $key2")
 		else
 			key2 = shift!(V)
 			key22 = shift!(V2)
 			node2 = shift!(N)
-			@debug("poping node 2 from N: ", key2)
+			@debug("poping node 2 from N: $key22 -> $key2")
 		end
 		nKey = key1+key2
 		nKey2 = key12+key22

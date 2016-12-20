@@ -215,7 +215,12 @@ end
 
 # load graph in format MGS v3
 function write_mgs3_graph{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, filename::AbstractString)
-  	# 12 bytes: 7 bytes string + 1 byte + 4 bytes position ('MGSv3  ' + <8bits T size> +  <32bits offset in size_t of data section>)
+  	# Header 12 bytes: 
+	# -> version: 7 bytes string
+	# -> size T: 1 byte
+	# -> # vertices: 4 bytes position 
+	#
+	# for example: 'MGSv3  ' + <8bits T size> +  <32bits offset in size_t of data section>
   	version = 0x4d475376332020
 	# size of type T in bytes
 	size_t = convert(UInt8, sizeof(T))
@@ -310,12 +315,10 @@ end
 
 # load graph in format MGS v4
 function write_mgs4_graph{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, filename::AbstractString)
-  	# 12 bytes: 7 bytes string + 1 byte + 4 bytes position ('MGSv4  ' + <8bits T size>
-	# size of the tree structure section
-	# + <32bits size in bits of S section> 
-	# size of the tree data section 
-	# + <32bits size in site_t of D section> 
-	# + <32bits offset in size_t of graph data section>)
+  	# 8 bytes: 7 bytes string + 1 byte: 'MGSv4  ' + <8bits T size>
+	# 4 bytes (32bits): size in bits of S section (i.e. size of the tree structure section)
+	# 4 bytes (32bits): size in site_t of D section (i.e. size of the tree data section)
+	# 4 bytes (32bits): offset in size_t of graph data section (i.e. # of vertices)
   	version = 0x4d475376342020
 	# size of type T in bytes
 	size_t = convert(UInt8, sizeof(T))
@@ -331,7 +334,7 @@ function write_mgs4_graph{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Arra
 	for v in vs
 		ovs = out_neighbors(v,g)
 		push!(pos,cpos)
-		push!(in_degress,length(out_neighbors(v,rg)))
+		push!(in_degrees,length(out_neighbors(v,rg)))
 		for o in ovs
 			push!(children,o)	
 			cpos += convert(T,1)
@@ -341,28 +344,115 @@ function write_mgs4_graph{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Arra
 	# get Huffman encoding tree
 	tree = huffman_encoding(in_degrees)
 
+	@debug("Huffman tree successfully generated")
+
+	# get Huffman codes in C (C:code -> value)
+	C = Dict{BitArray{1},T}()
+	get_huffman_codes!(tree, C, BitArray{1}())
+
+	@debug("Huffman codes successfully retrieved")
+
+	# reverse dictionary (R: value -> code)
+	R = Dict{T,BitArray{1}}()
+	[R[value] = key for (key, value) in C]
+
+	# encode tree in S and D
+	S = BitArray{1}()
+	D = Array{UInt8,1}()
+	encode_tree!(t, S, D)
+	
+	@debug("Huffman tree successfully encoded")
+
 	# number of vertices
 	gs = convert(UInt32, length(vs))
+	# size of S
+	ss = convert(UInt32, length(S))
+	# size of D
+	sd = convert(UInt32, length(D))
 
-	f = open("$filename.mgs", "w")
+	f = open("$filename.mgz", "w")
+	
+	@debug("writing header section")
+
 	### write header
 	# reinterpret generates an array of length 8 even if version has a length of 7 bytes
+	# write version + size of type T (8 bytes)
 	bytes = reinterpret(UInt8, [version])[1:7]
 	write(f, bytes)
+	# size of type T (1 byte)
 	bytes = reinterpret(UInt8, [size_t])
 	write(f, bytes)
+	# write size of S section (4 bytes)
+	bytes = reinterpret(UInt8, [ss])
+	write(f, bytes)
+	# write size of D section (4 bytes)
+	bytes = reinterpret(UInt8, [sd])
+	write(f, bytes)
+	# write number of vertices (4 bytes)
 	bytes = reinterpret(UInt8, [gs])
+	write(f, bytes)
+
+	@debug("writing S section")
+
+	### write S
+	# add padding to S BitArray if necessary
+	sp = 8-ss%8
+	for i in 1:sp
+		push!(S,0)
+	end
+	# number of bytes to write
+	nb = round(Int, length(S)/8)
+	for i in 1:nb
+		# BitArray chunks type is UInt64
+		# we only need to keep the last byte of the chunks
+		byte = reinterpret(UInt8, S[(i-1)*8+1:(i-1)*8+8].chunks)[1]
+		write(f, byte)
+	end
+
+	@debug("writing D section")
+	
+	### write D
+	bytes = reinterpret(UInt8, D)
 	write(f, bytes)
 	### write index section
 	for p in pos
 		bytes = reinterpret(UInt8, [p])
 		write(f, bytes)
 	end
+	
+	@debug("writing data section")
+	
 	### write data section
+	cdata = BitArray{1}()
 	for c in children
-		bytes = reinterpret(UInt8, [c])
-		write(f, bytes)
+		# get code associated to child id
+		code = R[c]
+		append!(cdata,code)
 	end
+	
+	@debug("length cdata before padding: ", length(cdata))
+	# add padding if necessary
+	scd = convert(UInt32, length(cdata))
+	sp = 8-scd%8
+	for i in 1:sp
+		push!(cdata,0)
+	end
+	@debug("length cdata after padding: ", length(cdata))
+	
+	# number of bytes to write
+	nb = round(Int, length(cdata)/8)
+	@debug("# bytes to write: $nb")
+	for i in 1:nb
+		# BitArray chunks type is UInt64
+		# we only need to keep the last byte of the chunks
+		byte = reinterpret(UInt8, cdata[(i-1)*8+1:(i-1)*8+8].chunks)[1]
+		write(f, byte)
+	end
+
+	# last byte indicates by how many bytes cdata was padded
+	b = 0xff
+	write(f, b >> sp)
+
 	close(f)
 end
 
