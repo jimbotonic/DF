@@ -195,16 +195,14 @@ end
 # get Huffman prefix codes dictionary
 #
 # C: dictionary (bitarray -> value::T)
-function get_huffman_codes!{T}(root::AbstractNode, C::Dict{BitArray{1},T}, S::BitArray{1})
-	if root.left == EmptyNode && root.right == EmptyNode
-        	C[S] = root.key
+function get_huffman_codes!{T}(root::AbstractNode, C::Dict{BitArray{1},T}, B::BitArray{1})
+	if root.key != 0
+        	C[B] = root.key
 	else
-		S0 = BitArray{1}()
-		push!(S0,false)
-		get_huffman_codes!(root.left, C, append!(S0,S)) 
-		S1 = BitArray{1}()
-		push!(S1,true)
-		get_huffman_codes!(root.right, C, append!(S1,S)) 
+		B1 = copy(B)
+		get_huffman_codes!(root.left, C, push!(B1,false)) 
+		B2 = copy(B)
+		get_huffman_codes!(root.right, C, push!(B2,true)) 
 	end
 end
 
@@ -225,10 +223,34 @@ function decode_tree!{T}(S::BitArray{1}, D::Array{T,1})
 	return EmptyNode
 end
 
+# decode values
+#
+# C: code -> value dictionary
+function decode_values{T}(tree::Node{T}, CDATA::BitArray{1})
+	children = T[]
+	cnode = tree
+	for i in 1:length(CDATA)
+		if cnode.left == EmptyNode && cnode.right == EmptyNode
+			push!(children,cnode.key)
+	 		cnode = tree
+		end
+		if CDATA[i] == 0
+			cnode = cnode.left
+		elseif CDATA[i] == 1
+			cnode = cnode.right
+		end
+	end
+	return children
+end
+
 # @return huffman tree
 #
 # A is assumed to have a length >= 2
 # A[i] is the value associated to element having index i (e.g. A[i] could be the in-degree of vertex i)
+#
+# conventions
+# -> lowest child is assigned to left leaf, and highest child to right leaf
+# -> 0: left branch, 1: right branch
 function huffman_encoding{T<:Unsigned}(A::Array{T,1})
 	# get sorted array in increasing order
 	# NB: instead of poping elements, we use shift
@@ -241,7 +263,6 @@ function huffman_encoding{T<:Unsigned}(A::Array{T,1})
 	# second queue
 	N = Array{Node,1}()
 	V = Array{T,1}()
-	V2 = Array{T,1}()
 	# creating initial tree
 	# NB: lowest node on the left
 	lKey = shift!(S)
@@ -249,48 +270,43 @@ function huffman_encoding{T<:Unsigned}(A::Array{T,1})
 	# get corresponding elements
 	lKey2 = shift!(R)
 	rKey2 = shift!(R)
+	# create new leaf nodes
 	lNode = Node{T}(lKey2,EmptyNode,EmptyNode)
 	rNode = Node{T}(rKey2,EmptyNode,EmptyNode)
 	nKey = lKey+rKey
-	nKey2 = lKey2+rKey2
-	nNode = Node{T}(nKey2,lNode,rNode)
+	# creating internal node
+	nNode = Node{T}(convert(T,0),lNode,rNode)
 	# NB: lenght(N) == 0 at the very end of the computation
 	while length(S) > 0 || length(N) > 0
 		# if some elements remain in the queues, insert latest node to the node queue
 		pos = searchsortedfirst(V,nKey)
 		insert!(V, pos, nKey)
-		insert!(V2, pos, nKey2)
 		insert!(N, pos, nNode)
 		# compare lowest values of both queues for node 1
 		if length(S) > 0 && S[1] <= V[1]
 			key1 = shift!(S)
 			key12 = shift!(R)
+			# create new leaf node
 			node1 = Node{T}(key12,EmptyNode,EmptyNode)
-			@debug("poping node 1 from S: $key12 -> $key1")
 		else
 			key1 = shift!(V)
-			key12 = shift!(V2)
 			node1 = shift!(N)
-			@debug("poping node 1 from N: $key12 -> $key1")
 		end
 		# compare lowest values of both queues for node 2
 		if length(S) > 0 && S[1] <= V[1]
 			key2 = shift!(S)
 			key22 = shift!(R)
+			# create new leaf node
 			node2 = Node{T}(key22,EmptyNode,EmptyNode)
-			@debug("poping node 2 from S: $key22 -> $key2")
 		else
 			key2 = shift!(V)
-			key22 = shift!(V2)
 			node2 = shift!(N)
-			@debug("poping node 2 from N: $key22 -> $key2")
 		end
 		nKey = key1+key2
-		nKey2 = key12+key22
 		if key1 > key2
-			nNode = Node{T}(nKey2,node2,node1)
+			nNode = Node{T}(convert(T,0),node2,node1)
 		else
-			nNode = Node{T}(nKey2,node1,node2)
+			nNode = Node{T}(convert(T,0),node1,node2)
 		end
 	end
 	return nNode

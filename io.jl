@@ -316,8 +316,6 @@ end
 # load graph in format MGS v4
 function write_mgs4_graph{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, filename::AbstractString)
   	# 8 bytes: 7 bytes string + 1 byte: 'MGSv4  ' + <8bits T size>
-	# 4 bytes (32bits): size in bits of S section (i.e. size of the tree structure section)
-	# 4 bytes (32bits): size in site_t of D section (i.e. size of the tree data section)
 	# 4 bytes (32bits): offset in size_t of graph data section (i.e. # of vertices)
   	version = 0x4d475376342020
 	# size of type T in bytes
@@ -341,39 +339,25 @@ function write_mgs4_graph{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Arra
 		end
 	end
 
+	@info("generating Huffman tree")
 	# get Huffman encoding tree
 	tree = huffman_encoding(in_degrees)
 
-	@debug("Huffman tree successfully generated")
-
+	@info("getting Huffman codes")
 	# get Huffman codes in C (C:code -> value)
 	C = Dict{BitArray{1},T}()
 	get_huffman_codes!(tree, C, BitArray{1}())
 
-	@debug("Huffman codes successfully retrieved")
-
 	# reverse dictionary (R: value -> code)
 	R = Dict{T,BitArray{1}}()
 	[R[value] = key for (key, value) in C]
-
-	# encode tree in S and D
-	S = BitArray{1}()
-	D = Array{UInt8,1}()
-	encode_tree!(t, S, D)
 	
-	@debug("Huffman tree successfully encoded")
-
 	# number of vertices
 	gs = convert(UInt32, length(vs))
-	# size of S
-	ss = convert(UInt32, length(S))
-	# size of D
-	sd = convert(UInt32, length(D))
 
 	f = open("$filename.mgz", "w")
 	
-	@debug("writing header section")
-
+	@info("writing header section")
 	### write header
 	# reinterpret generates an array of length 8 even if version has a length of 7 bytes
 	# write version + size of type T (8 bytes)
@@ -382,46 +366,25 @@ function write_mgs4_graph{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Arra
 	# size of type T (1 byte)
 	bytes = reinterpret(UInt8, [size_t])
 	write(f, bytes)
-	# write size of S section (4 bytes)
-	bytes = reinterpret(UInt8, [ss])
-	write(f, bytes)
-	# write size of D section (4 bytes)
-	bytes = reinterpret(UInt8, [sd])
-	write(f, bytes)
 	# write number of vertices (4 bytes)
 	bytes = reinterpret(UInt8, [gs])
 	write(f, bytes)
-
-	@debug("writing S section")
-
-	### write S
-	# add padding to S BitArray if necessary
-	sp = 8-ss%8
-	for i in 1:sp
-		push!(S,0)
-	end
-	# number of bytes to write
-	nb = round(Int, length(S)/8)
-	for i in 1:nb
-		# BitArray chunks type is UInt64
-		# we only need to keep the last byte of the chunks
-		byte = reinterpret(UInt8, S[(i-1)*8+1:(i-1)*8+8].chunks)[1]
-		write(f, byte)
-	end
-
-	@debug("writing D section")
 	
-	### write D
-	bytes = reinterpret(UInt8, D)
-	write(f, bytes)
+	@info("writing frequency section")
+	### write frequency section
+	for p in in_degrees
+		bytes = reinterpret(UInt8, [p])
+		write(f, bytes)
+	end
+	
+	@info("writing index section")
 	### write index section
 	for p in pos
 		bytes = reinterpret(UInt8, [p])
 		write(f, bytes)
 	end
 	
-	@debug("writing data section")
-	
+	@info("writing data section")
 	### write data section
 	cdata = BitArray{1}()
 	for c in children
@@ -430,14 +393,12 @@ function write_mgs4_graph{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Arra
 		append!(cdata,code)
 	end
 	
-	@debug("length cdata before padding: ", length(cdata))
 	# add padding if necessary
 	scd = convert(UInt32, length(cdata))
 	sp = 8-scd%8
 	for i in 1:sp
 		push!(cdata,0)
 	end
-	@debug("length cdata after padding: ", length(cdata))
 	
 	# number of bytes to write
 	nb = round(Int, length(cdata)/8)
@@ -454,6 +415,89 @@ function write_mgs4_graph{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Arra
 	write(f, b >> sp)
 
 	close(f)
+end
+
+# load graph in format MGS v4
+function load_mgs4_graph{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, filename::AbstractString)
+	f = open(filename, "r")
+	### read header
+  	# 8 bytes: 7 bytes string + 1 byte: 'MGSv4  ' + <8bits T size>
+	# 4 bytes (32bits): offset in size_t of graph data section (i.e. # of vertices)
+	#
+	# 7-bytes version
+	version = read(f,UInt8,7)
+	# size in bytes of T
+	size_t = convert(UInt8, read(f,UInt8,1)[1])
+	# number of vertices
+	gs = reinterpret(UInt32, read(f,UInt8,4))[1]
+	
+	# read frequency section
+	F = T[]
+	for i in 1:gs
+		p = read(f,UInt8,sizeof(T))
+		push!(F,reinterpret(T,p)[1])
+	end
+	
+	# read index section
+	pos = T[]
+	for i in 1:gs
+		p = read(f,UInt8,sizeof(T))
+		push!(pos,reinterpret(T,p)[1])
+	end
+
+	# read data section
+	CDATA = BitArray{1}()
+	while !eof(f)
+		b = read(f,UInt8,1)[1]
+		for j in 0:7
+			if ((b >> j) & 0x01) == 1
+				push!(CDATA,true)
+			else
+				push!(CDATA,false)
+			end
+		end
+	end
+	close(f)
+
+	# get last byte number of 0s
+	sp = 8 - sum(CDATA[end-7:end])
+	CDATA = CDATA[1:end-(7+sp)]
+
+	@info("generating Huffman tree")
+	# get Huffman encoding tree
+	tree = huffman_encoding(F)
+	
+	@info("decoding values")
+	# decode values
+	children = decode_values(tree, CDATA)
+	
+	@info("generating graph")
+	# vertex set
+	vs = range(1,length(pos))
+
+	@info("adding vertices")
+	# add vertices
+	for i in 1:length(vs)
+        	add_vertex!(g,convert(T,i))
+	end
+
+	@info("adding edges")
+	# add edges
+	for i in 1:length(vs)
+		source = convert(T,i)
+		# if we reached the last parent vertex
+		if i == length(vs)
+			pos1 = pos[i]
+			pos2 = length(children)
+		else
+			pos1 = pos[i]
+			pos2 = pos[i+1]-1
+		end
+		for p in pos1:pos2
+			target = children[p]
+			add_edge!(g,source,target)
+		end
+	end
 end
 
 # load graph from CSV adjacency list
