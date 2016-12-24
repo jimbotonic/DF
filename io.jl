@@ -52,6 +52,8 @@ function serialize_to_jls(x::Any, filename::AbstractString)
 end
 
 # load serialized JLD data
+#
+# NB: better for long term storage
 function load_jld_serialized(name::AbstractString, filename::AbstractString)
 	x = jldopen(filename, "r") do file
     		read(file, name)
@@ -60,6 +62,8 @@ function load_jld_serialized(name::AbstractString, filename::AbstractString)
 end
 
 # serialize data to JLD format
+#
+# NB: better for long term storage
 function serialize_to_jld(x::Any, name::AbstractString, filename::AbstractString)
 	jldopen("$filename.jld", "w") do file
 		write(file, name, x)

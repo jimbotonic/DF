@@ -83,7 +83,7 @@ get_huffman_codes!(t2, C, B)
 # load graph
 @info("loading MGS3 graph")
 g = adjlist(UInt32, is_directed=true)
-load_mgs3_graph(g,"datasets/Arxiv\ HEP-PH/Arxiv_HEP-PH_core.mgs")
+load_mgs3_graph(g,"datasets/Arxiv_HEP-PH/Arxiv_HEP-PH_core.mgs")
 @info("# vertices:", length(vertices(g)))
 @info("# edges:", num_edges(g))
 
@@ -99,3 +99,6 @@ g2 = adjlist(UInt32, is_directed=true)
 load_mgs4_graph(g2,"test.mgz")
 @info("# vertices:", length(vertices(g2)))
 @info("# edges:", num_edges(g2))
+
+@info("##########")
+
