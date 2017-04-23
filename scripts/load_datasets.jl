@@ -8,8 +8,8 @@ include("../graphs.jl")
 # loading and exporting datasets
 ###
 
-# amazon_0601, web_google, arxiv_hep-ph
-dataset = "arxiv"
+# amazon_0601, web_google, arxiv_hep-ph, eat
+dataset = "eat"
 
 if dataset == "amazon"
 	@info("loading Amazon_0601 graph")
@@ -80,4 +80,27 @@ elseif dataset == "arxiv"
 	write_mgs3_graph(rcore, "Arxiv_HEP-PH_rcore")
 	write_mgs4_graph(rcore, core, "Arxiv_HEP-PH_rcore")
 	#serialize_to_jld(rcore, "rcore", "Arxiv_HEP-PH_rcore")
+elseif dataset == "eat"
+	@info("loading EAT (new) graph")
+	g = adjlist(UInt32, is_directed=true)
+	load_graph_from_pajek(UInt32, g, "../datasets/EAT/EATnew.net")
+	@info("# vertices:", length(vertices(g)))
+	@info("# edges:", num_edges(g))
+
+	@info("getting core")
+	core,oni,noi = get_core(g)
+	@info("# vertices:", length(vertices(core)))
+	@info("# edges:", num_edges(core))
+
+	@info("getting reverse graph")
+	rcore = get_reverse_graph(core) 
+	@info("# edges (rcore):", num_edges(rcore))
+
+	write_mgs3_graph(core, "EAT_core")
+	write_mgs4_graph(core, rcore, "EAT_core")
+	#serialize_to_jld(core, "core", "EAT_core")
+	
+	write_mgs3_graph(rcore, "EAT_rcore")
+	write_mgs4_graph(rcore, core, "EAT_rcore")
+	#serialize_to_jld(rcore, "rcore", "EAT_rcore")
 end

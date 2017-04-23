@@ -1,6 +1,6 @@
 #
 # JCNL: Julia Complex Networks Library
-# Copyright (C) 2016  Jimmy Dubuisson <jimmy.dubuisson@gmail.com>
+# Copyright (C) 2016-2017  Jimmy Dubuisson <jimmy.dubuisson@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -14,7 +14,6 @@
 #
 
 using Graphs, DataStructures, Logging
-
 
 # Tarjan algorithm (recursive version)
 #

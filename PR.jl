@@ -1,6 +1,6 @@
 #
 # JCNL: Julia Complex Networks Library
-# Copyright (C) 2016  Jimmy Dubuisson <jimmy.dubuisson@gmail.com>
+# Copyright (C) 2016-2017  Jimmy Dubuisson <jimmy.dubuisson@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -95,7 +95,7 @@ function PR{T<:Unsigned}(rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},
 	return pr
 end
 
-# naïve implementation of personalized Pagerank with a single source vertex
+# simple implementation of personalized Pagerank with a single source vertex
 function personalized_PR{T<:Unsigned}(src::T, g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}; damping::Float64=0.85, epsilon::Float64=1e-4)
 	vs = vertices(g)
 	n = length(vs)

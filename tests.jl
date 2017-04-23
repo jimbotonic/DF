@@ -2,11 +2,15 @@ include("utils.jl")
 include("io.jl")
 include("graphs.jl")
 
+using Base.Test
+
 @Logging.configure(level=INFO)
 
 ###
 # sorting algorithms
 ###
+
+@info("############ Testing sorting functions")
 
 A = Int[3,6,4,7,1,9,2,12,10]
 
@@ -17,20 +21,34 @@ R = bottom_up_sort(A)
 A2 = copy(A)
 R2 = quicksort_iterative!(A2)	
 
+# permutation array
+PA = [5,7,1,3,2,4,6,9,8]
+
+@test R == R2 == PA
+
+# sorted arrays
+SA1 = [1,2,3,4,6,7,9,10,12] 
+SA2 = [12,10,9,7,6,4,3,2,1]
+
 S = get_sorted_array(A,R)
 S2 = get_sorted_array(A,R,false)
 
 @info("original array: ", A)
 @info("permutation array (merge sort): ", R)
 @info("permutation array (quicksort): ", R2)
-@info("sorted array: ", S)
-@info("sorted array: ", S2)
+@info("sorted array (increasing): ", S)
+@info("sorted array (decreasing): ", S2)
+
+@test S == SA1
+@test S2 == SA2
 
 @info("##########")
 
 ###
 # search functions
 ###
+
+@info("############ Testing search functions")
 
 v = Int[1,2,4,6,8]
 i = binary_search(v,3)
@@ -47,6 +65,12 @@ i5 = searchsortedfirst(v,0)
 @info("insert position of 0: ", i5)
 
 @info("##########")
+
+###
+# Huffman encoding
+###
+
+@info("############ Testing Huffman encoding functions")
 
 v = UInt8[1,6,3,7,2,8,5,18,12,17,13,24,12,1,4]
 #v = UInt8[1,1,1,1]
@@ -79,6 +103,8 @@ get_huffman_codes!(t2, C, B)
 ###
 # loading MGS3 and writing MGS4
 ###
+
+@info("############ Testing graph serialization functions")
 
 # load graph
 @info("loading MGS3 graph")
