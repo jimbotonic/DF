@@ -117,7 +117,7 @@ load_mgs3_graph(g,"datasets/Arxiv_HEP-PH/Arxiv_HEP-PH_core.mgs")
 rg = get_reverse_graph(g) 
 @info("# edges (rg):", num_edges(rg))
 
-@info("reading for writing MGS4 graph")
+@info("writing MGS4 graph")
 write_mgs4_graph(g, rg, "test")
 
 @info("loading MGS4 graph")
@@ -127,4 +127,3 @@ load_mgs4_graph(g2,"test.mgz")
 @info("# edges:", num_edges(g2))
 
 @info("##########")
-
