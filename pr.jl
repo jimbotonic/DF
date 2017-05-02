@@ -13,9 +13,13 @@
 # GNU General Public License for more details.
 #
 
-include("RW.jl")
+include("rw.jl")
 
 using Graphs, DataStructures, Logging, Distances
+
+###
+# Simple graph based Pagerank algorithm
+###
 
 # simple implementation of Pagerank algorithm
 function PR{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}; init_pr::Array{Float64,1}=Float64[], damping::Float64=0.85, epsilon::Float64=1e-4)
@@ -28,7 +32,7 @@ function PR{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1
 	else
 		pr = Float64[1/n for k in vs]
 	end
-	pr2 = copy(pr)
+	pr2 = zeros(Float64,n)
 	while true
 		for v in vs
 			nv = 0.
@@ -42,8 +46,11 @@ function PR{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1
 			pr2[v] = (1-damping)/n+damping*nv
 		end
 		d = chebyshev(pr,pr2)
+		if d <= epsilon
+			pr = pr2
+			break
+		end
 		pr = copy(pr2)
-		d <= epsilon && break
 	end
 	return pr
 end
@@ -56,13 +63,12 @@ function PR{T<:Unsigned}(rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},
 	n = length(vs)
 	@info("computing Pagerank (size of graph $n)")
 	# initialize pagerank vector
-	# initialize pagerank vector
 	if length(init_pr) == n
 		pr = init_pr
 	else
 		pr = Float64[1/n for k in vs]
 	end
-	pr2 = copy(pr)	
+	pr2 = zeros(Float64,n)
 	# iteration number
 	ic = 1
 	# progression
@@ -84,26 +90,29 @@ function PR{T<:Unsigned}(rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},
 			end
 		end
 		d = chebyshev(pr,pr2)
-		pr = copy(pr2)
 		@info("distance(t,t+1) = $d")
 		if save_pr
 			serialize_to_file(pr, "pr-iter-$ic.jld")
 		end
 		ic = ic + 1
-		d <= epsilon && break
+		if d <= epsilon
+			pr = pr2
+			break
+		end
+		pr = copy(pr2)
 	end
 	return pr
 end
 
 # simple implementation of personalized Pagerank with a single source vertex
-function personalized_PR{T<:Unsigned}(src::T, g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}; damping::Float64=0.85, epsilon::Float64=1e-4)
+function PPR{T<:Unsigned}(src::T, g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}; damping::Float64=0.85, epsilon::Float64=1e-4)
 	vs = vertices(g)
 	n = length(vs)
 	@info("computing personalized Pagerank (size of graph $n, source $src)")
 	# initialize pagerank vector
 	pr = [0. for k in vs]
 	pr[src] = 1.
-	pr2 = copy(pr)
+	pr2 = zeros(Float64,n)
 	while true
 		for v in vs
 			nv = 0.
@@ -121,18 +130,22 @@ function personalized_PR{T<:Unsigned}(src::T, g::GenericAdjacencyList{T,Array{T,
 			end
 		end
 		d = chebyshev(pr,pr2)
+		if d <= epsilon
+			pr = pr2
+			break
+		end
 		pr = copy(pr2)
-		d <= epsilon && break
 	end
 	return pr
 end
 
-
+###
 # Monte-Carlo Pagerank algorithm
-#
+###
+
 # MC Pagerank with cyclic start of complete path stopping at sink nodes
 # http://www-sop.inria.fr/members/Konstantin.Avratchenkov/pubs/mc.pdf
-function MC_PR{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, n_cycles::Int; damping::Float64=0.85, epsilon::Float64=1e-4)
+function PR{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, n_cycles::Int; damping::Float64=0.85, epsilon::Float64=1e-4)
 	vs = vertices(g)
 	n = length(vs)
 	vv = zeros(Float64, n)
@@ -143,4 +156,35 @@ function MC_PR{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1
 		end
 	end
 	return vv/sum(vv)
+end
+
+###
+# Power iteration method
+###
+
+function PR{T<:Unsigned}(P::SparseMatrixCSC{Float64,T}; ppr::Array{Float64,1}=Float64[], init_pr::Array{Float64,1}=Float64[], damping::Float64=0.85, epsilon::Float64=1e-4)
+	n = size(P)[1]
+	# initialize personalized vector
+	if length(ppr) != n
+		ppr = Float64[1/n for i in 1:n]
+	end
+	# initialize Pagerank vector
+	if length(init_pr) != n
+		pr = Float64[1/n for i in 1:n]
+	else
+		pr = init_pr
+	end
+	pr2 = Float64[]
+	while true
+		#pr2 = (damping*pr'*P + (1-damping)*ppr')'
+		pr2 = damping*P'*pr + (1-damping)*ppr
+		d = chebyshev(pr,pr2)
+		if d <= epsilon
+			pr = pr2
+			break
+		end
+		pr = copy(pr2)
+	end
+	return pr
+
 end

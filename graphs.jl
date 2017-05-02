@@ -431,3 +431,53 @@ function get_colink_coefficients{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,
 	end
 	return ccs
 end
+
+
+# get inclist from adjlist
+function get_inclist_from_adjlist{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}})
+	g2 = inclist(vertices(g), is_directed=true)
+	for u in vertices(g)
+		for v in out_neighbors(u,g)
+			add_edge!(g2,u,v)
+		end
+	end
+	return g2
+end
+
+# get sparse adjacency matrix
+function get_sparse_adj_matrix{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}})
+	I = Array{T,1}()
+	J = Array{T,1}()
+	V = Array{Float64,1}()
+	for u in vertices(g)
+		nei = out_neighbors(v,g)
+		for v in nei
+			push!(I,u)
+			push!(J,v)
+			push!(V,1.)
+		end
+	end
+	return sparse(I,J,V)
+end
+
+# get P = D^-1 A matrix
+function get_sparse_P_matrix{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}})
+	I = Array{T,1}()
+	J = Array{T,1}()
+	V = Array{Float64,1}()
+	I2 = Array{T,1}()
+	J2 = Array{T,1}()
+	V2 = Array{Float64,1}()
+	for u in vertices(g)
+		nei = out_neighbors(u,g)
+		for v in nei
+			push!(I2,u)
+			push!(J2,v)
+			push!(V2,1.)
+		end
+		push!(I,u)
+		push!(J,u)
+		push!(V,1/out_degree(u,g))
+	end
+	return  sparse(I,J,V) * sparse(I2,J2,V2)
+end

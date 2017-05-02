@@ -1,8 +1,8 @@
 include("../utils.jl")
 include("../io.jl")
 include("../graphs.jl")
-include("../PR.jl")
-include("../RW.jl")
+include("../pr.jl")
+include("../rw.jl")
 
 @Logging.configure(level=INFO)
 
@@ -20,20 +20,14 @@ load_mgs3_graph(core, "../datasets/Arxiv_HEP-PH/Arxiv_HEP-PH_core.mgs")
 rcore = get_reverse_graph(core)
 
 @info("transforming core from adj to inc list")
-core2 = inclist(vertices(core), is_directed=true)
-
-@info("adding edges to inc list")
-for u in vertices(core)
-	for v in out_neighbors(u,core)
-		add_edge!(core2,u,v)
-	end
-end
+core2 = get_inclist_from_adjlist(core)
 #serialize_to_jld(core2, "core", "Arxiv_HEP-PH_core_inclist")
 
 @info("computing Djikstra from vertex 1")
 dists = ones(num_edges(core2))
 s = convert(UInt32,1)
 t = convert(UInt32,100)
+n = num_vertices(core)
 @time r = dijkstra_shortest_paths(core2, dists, s)
 
 @info("mean distance from vertex 1: ", mean(r.dists))
@@ -51,14 +45,26 @@ paths = enumerate_paths(vertices(core2), r.parent_indices, [10,100])
 @time r = shortest_path(core2, dists, s, t)
 @info("shortest path from vertex 1 to vertex 100: ", r)
 
+@info("getting P for core")
+P_core = get_sparse_P_matrix(core)
+P_rcore = get_sparse_P_matrix(rcore)
+
 @info("computing Pagerank of core and rcore")
 eps = 1e-4
-@time pr_core = PR(core, rcore, epsilon=eps)
-@time pr_rcore = PR(rcore, core, epsilon=eps)
+#@time pr_core = PR(core, rcore, epsilon=eps)
+#@time pr_rcore = PR(rcore, core, epsilon=eps)
+@time pr_core = PR(P_core, epsilon=eps)
+@time pr_rcore = PR(P_rcore, epsilon=eps)
 
 @info("computing personalized Pageranks for nodes 1 and 100")
-@time pr_s = personalized_PR(s, core, rcore, epsilon=eps)
-@time pr_t = personalized_PR(t, rcore, core, epsilon=eps)
+#@time pr_s = PPR(s, core, rcore, epsilon=eps)
+#@time pr_t = PPR(t, rcore, core, epsilon=eps)
+ppr_s = zeros(Float64,n)
+ppr_s[s] = 1.
+@time pr_s = PR(P_core, ppr=ppr_s, epsilon=1e-10)
+ppr_t = zeros(Float64,n)
+ppr_t[t] = 1.
+@time pr_t = PR(P_rcore, ppr=ppr_t, epsilon=1e-10)
 
 @info("computing diffusion fingerprints")
 df = pr_s .* pr_t
@@ -90,7 +96,7 @@ while length(sp) < ml
 
 	# we found a path
 	if cv == t
-		@debug("path found: ", sp)
+		@info("path found: ", sp)
 		push!(sp,t)
 		break
 	end
@@ -140,3 +146,5 @@ while c < max_iter
 end
 
 @info("shortest paths: ", convert(Array{Array{Int64,1},1}, sps))
+
+

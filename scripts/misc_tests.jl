@@ -1,6 +1,6 @@
-include("utils.jl")
-include("io.jl")
-include("graphs.jl")
+include("../utils.jl")
+include("../io.jl")
+include("../graphs.jl")
 
 using Base.Test
 
@@ -109,7 +109,7 @@ get_huffman_codes!(t2, C, B)
 # load graph
 @info("loading MGS3 graph")
 g = adjlist(UInt32, is_directed=true)
-load_mgs3_graph(g,"datasets/Arxiv_HEP-PH/Arxiv_HEP-PH_core.mgs")
+load_mgs3_graph(g,"../datasets/Arxiv_HEP-PH/Arxiv_HEP-PH_core.mgs")
 @info("# vertices:", length(vertices(g)))
 @info("# edges:", num_edges(g))
 
