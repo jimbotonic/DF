@@ -7,15 +7,12 @@ include("../rw.jl")
 @Logging.configure(level=INFO)
 
 function get_sp_greedy{T<:Unsigned}(s::T, t::T, g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, df::Array{Float64,1}, max_length::Int64)
+	@info("searching shortest path (greedy approach) between vertices $s and $t")
 	# current vertex
 	cv = s
 	# current path
 	sp = T[]
-
-	@info("finding shortest path (greedy approach)")
-
 	while length(sp) < max_length
-		@debug("adding vertex: ", cv)
 		push!(sp,cv)
 		nei = out_neighbors(cv,g)
 		nnei = setdiff(nei,sp)
@@ -28,8 +25,8 @@ function get_sp_greedy{T<:Unsigned}(s::T, t::T, g::GenericAdjacencyList{T,Array{
 
 		# a path was found
 		if cv == t
-			@info("path found: ", sp)
 			push!(sp,t)
+			@info("path found: ", sp)
 			break
 		end
 	end
@@ -37,6 +34,7 @@ function get_sp_greedy{T<:Unsigned}(s::T, t::T, g::GenericAdjacencyList{T,Array{
 end
 
 function get_sp_proba{T<:Unsigned}(s::T, t::T, g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, df::Array{Float64,1}, max_length::Int64, max_iter::Int64)
+	@info("searching shortest path (probabilistic approach) between vertices $s and $t")
 	# array of paths
 	sps = Array{Array{T,1},1}()
 	# current path
@@ -44,17 +42,20 @@ function get_sp_proba{T<:Unsigned}(s::T, t::T, g::GenericAdjacencyList{T,Array{T
 	# search in a probabilistic way shortest paths between s and t
 	cv = s
 	c = 0
+	# shortest length found so far
+	min_length = Inf
 	while c < max_iter
-		while length(sp) < ml 
-			@debug("adding vertex: ", cv)
+		sp = T[]
+		cv = s
+		# path length
+		pl = 1
+		while pl < max_length && pl < (min_length-1)
 			push!(sp,cv)
-			nei = out_neighbors(cv,core)
+			nei = out_neighbors(cv, g)
 			nnei = setdiff(nei,sp)
 			if length(nnei) == 0
 				@debug("--- exploration reached a dead end")
 				@debug("--- explored path: ", sp)
-				sp = T[]
-				cv = s
 				break
 			end
 			pos = get_flying_index(df[nnei] / sum(df[nnei]))
@@ -63,14 +64,18 @@ function get_sp_proba{T<:Unsigned}(s::T, t::T, g::GenericAdjacencyList{T,Array{T
 			# we found a path
 			if cv == t
 				push!(sp,t)
-				@debug("path found: ", sp)
+				pl += 1
 				if !(sp in sps)
+					@info("path found between $s and $t (length $pl): ", sp)
 					push!(sps,sp)
+					# update min_length if necessary
+					if pl < min_length
+						min_length = pl
+					end
 				end
-				sp = T[]
-				cv = s
 				break
 			end
+			pl += 1
 		end
 		c += 1
 	end
@@ -78,7 +83,7 @@ function get_sp_proba{T<:Unsigned}(s::T, t::T, g::GenericAdjacencyList{T,Array{T
 end
 
 BOOST = true
-PROBA = true
+PROBA = false
 
 @info("############ Testing shortest paths functions")
 
@@ -118,12 +123,13 @@ ppr_s[s] = 1.
 
 # max paths length
 #ml = floor(Int,log(length(vertices(core))))
-ml = 12
+ml = 20
 
 sp = UInt32[]
 
 tc = 0
 sc = 0
+sc2 = 0
 
 for t in UInt32(2):UInt32(100)
 	# Djikstra
@@ -152,6 +158,8 @@ for t in UInt32(2):UInt32(100)
 		if length(sps) > 0
 			mi = indmin(Int64[length(a) for a in sps])
 			sp = sps[mi]
+		else
+			sp = UInt32[]
 		end
 	end
 	@info("----- sp (df): ", convert(Array{Int64,1}, sp))
@@ -159,8 +167,12 @@ for t in UInt32(2):UInt32(100)
 	if paths[1] == sp
 		sc += 1
 	end
+	if length(paths[1]) == length(sp)
+		sc2 += 1
+	end
 	tc += 1
 end
 
-@info("Success rate: ", sc/tc)
+@info("% same SP: ", sc/tc)
+@info("% same length: ", sc2/tc)
 
