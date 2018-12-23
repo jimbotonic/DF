@@ -1,6 +1,6 @@
 #
 # JCNL: Julia Complex Networks Library
-# Copyright (C) 2016-2017  Jimmy Dubuisson <jimmy.dubuisson@gmail.com>
+# Copyright (C) 2016-2019  Jimmy Dubuisson <jimmy.dubuisson@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@ using Graphs, DataStructures, Logging
 #
 # NB: successfully tested with FA core
 # NB: the recursive calls may create a stack overflow error
-function tarjan{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}})
+function tarjan(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}) where {T<:Unsigned}
 	sccs = Array(Array{T,1},0)
 	n = length(vertices(g))
 	indices = zeros(T,n)
@@ -69,7 +69,7 @@ end
 #
 # NB: successfully tested with FA core
 # NB: the recursive calls may create a stack overflow error
-function pearce{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}})
+function pearce(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}) where {T<:Unsigned}
 	n = length(vertices(g))
 	rindex = zeros(T,n)
 	S = T[]
@@ -110,14 +110,14 @@ function pearce{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,
 end
 
 # Pearce algorithm state
-type state{T}
+mutable struct state{T}
 	v::T
 	stage::T
 	root::Bool
 end
 
 # Pearce version of Tarjan algorithm - iterative version
-function pearce_iterative{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}})
+function pearce_iterative(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}) where {T<:Unsigned}
 	n = length(vertices(g))
 	rindex = zeros(T,n)
 	S = T[]

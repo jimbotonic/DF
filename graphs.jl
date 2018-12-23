@@ -1,6 +1,6 @@
 #
 # JCNL: Julia Complex Networks Library
-# Copyright (C) 2016-2017  Jimmy Dubuisson <jimmy.dubuisson@gmail.com>
+# Copyright (C) 2016-2019  Jimmy Dubuisson <jimmy.dubuisson@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,8 +16,6 @@
 using Graphs, DataStructures, Logging
 
 include("algorithms.jl")
-
-@Logging.configure(level=DEBUG)
 
 ###
 # Basic stats for directed graphs
@@ -40,25 +38,25 @@ function display_basic_stats(g,rg)
 	avg_od,max_od,sinks = get_out_degree_stats(g)
 	avg_id,max_id,sources = get_out_degree_stats(rg)
 
-	@info("# vertices: $nvs")
-	@info("# edges: $nes")
-	@info("density: $dens")
-	@info()
-	@info("avg out-degree: $avg_od")
-	@info("max out-degree: $max_od")
+	info("# vertices: $nvs")
+	info("# edges: $nes")
+	info("density: $dens")
+	info()
+	info("avg out-degree: $avg_od")
+	info("max out-degree: $max_od")
 	nsinks = length(sinks)
-	@info("# sinks: $nsinks")
-	@info()
-	@info("avg in-degree: $avg_id")
-	@info("max in-degree: $max_id")
+	info("# sinks: $nsinks")
+	info()
+	info("avg in-degree: $avg_id")
+	info("max in-degree: $max_id")
 	nsources = length(sources)
-	@info("# sources: $nsources")
+	info("# sources: $nsources")
 end
 
 # get out degree stats
 #
 # retuns avg out-degree, max out-degree, array of sinks vertices
-function get_out_degree_stats{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}})
+function get_out_degree_stats(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}) where {T<:Unsigned}
 	sum = 0
 	sinks = T[]
 	max_degree = 0
@@ -78,7 +76,7 @@ function get_out_degree_stats{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},
 end
 
 # get array of sink vertices in the specified graph
-function get_sinks{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}})
+function get_sinks(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}) where {T<:Unsigned}
 	sinks = T[]
 	vs = vertices(g)
 	for v in vs
@@ -92,7 +90,7 @@ function get_sinks{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array
 end
 
 # get array of source vertices in the specified graph
-function get_sources{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}})
+function get_sources(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}) where {T<:Unsigned}
 	achildren = T[]
 	vs = vertices(g)
 	for v in vs
@@ -107,7 +105,7 @@ end
 ###
 
 # get the subgraph of g induced by the set of vertices sids
-function subgraph{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},sids::Array{T,1})
+function subgraph(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},sids::Array{T,1}) where {T<:Unsigned}
 	ng = adjlist(T, is_directed=true)
 	# nvs should be sorted in acending order
 	nvs = sort(sids)
@@ -145,7 +143,7 @@ end
 
 # get the subgraph of g induced by the set of vertices sids
 # write the subgraph in MGS format v2
-function subgraph_streamed{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, sids::Array{T,1}, name::String)
+function subgraph_streamed(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, sids::Array{T,1}, name::String) where {T<:Unsigned}
 	ng = adjlist(T, is_directed=true)
 	# nvs should be sorted in acending order
 	nvs = sort(sids)
@@ -190,7 +188,7 @@ end
 # get the main SCC
 #
 # @returns ng (core subgraph), oni (old->new vertex indices), noi (new->old vertex indices)
-function get_core{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}})
+function get_core(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}) where {T<:Unsigned}
 	sccs = pearce_iterative(g)
 	scc_ids = union(sccs,[])
 	id_size = Dict{T,T}()
@@ -227,7 +225,7 @@ end
 
 # get the main SCC and write it to the specified file (MGS format)
 # write the subgraph in MGS format v2
-function get_core_streamed{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},sccs::Array{T,1},name::String)
+function get_core_streamed(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},sccs::Array{T,1},name::String) where {T<:Unsigned}
 	scc_ids = union(sccs,[])
 	id_size = Dict{T,T}()
 
@@ -264,7 +262,7 @@ end
 # get the reverse graph (same graph with all edge directions reversed)
 #
 # @returns reversed graph
-function get_reverse_graph{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}})
+function get_reverse_graph(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}) where {T<:Unsigned}
 	ng = adjlist(T, is_directed=true)
 	vs = vertices(g)
 
@@ -287,7 +285,7 @@ end
 # get in-degree of g vertices
 #
 # @returns dictionary (vertex_id -> in-degree)
-function get_vertex_in_degrees{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}})
+function get_vertex_in_degrees(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}) where {T<:Unsigned}
 	vin = Dict{T,T}()
 	for v in vertices(g)
 		ovs = out_neighbors(v,g)
@@ -303,7 +301,7 @@ function get_vertex_in_degrees{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1}
 end
 
 # get in- and out- degree arrays of specified graph
-function get_in_out_degrees{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}})
+function get_in_out_degrees(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}) where {T<:Unsigned}
 	vin = get_vertex_in_degrees(g)
 	in_degrees = T[]
 	out_degrees = T[]
@@ -320,7 +318,7 @@ end
 # nb_steps: number of points used to compute p_avg
 #
 # NB: to get the avg in-degree of visited nodes, one can use the reverse graph of g
-function get_avg_out_degree{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, visited::Array{T,1}, p_avg::Float64=float64(-1), np_steps::UInt64=uint64(0))
+function get_avg_out_degree(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, visited::Array{T,1}, p_avg::Float64=float64(-1), np_steps::UInt64=uint64(0)) where {T<:Unsigned}
 	sum = float64(0)
 	for v in visited
 		sum += length(out_neighbors(v,g))
@@ -333,7 +331,7 @@ function get_avg_out_degree{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Ar
 end
 
 # get a ball centered at the specified vertex
-function get_forward_ball{T<:Unsigned}(v::T,g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},radius::Int=2,p::Float64=1)
+function get_forward_ball(v::T,g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},radius::Int=2,p::Float64=1) where {T<:Unsigned}
 	# vertex ids of the ball
 	subids = T[]
 	push!(subids,v)
@@ -377,7 +375,7 @@ end
 # get the array of clustering coefficients
 #
 # ncolinks: array of the number of colinks for each vertex
-function get_clustering_coefficients{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},ntriangles::Array{T,1},density::Float64=-1.)
+function get_clustering_coefficients(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},ntriangles::Array{T,1},density::Float64=-1.) where {T<:Unsigned}
 	vs = vertices(g)
 	n = length(vs)
 	ccs = zeros(Float64,n)
@@ -409,7 +407,7 @@ end
 # get the array of colink coefficients
 #
 # ncolinks: array of the number of colinks for each vertex
-function get_colink_coefficients{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},ncolinks::Array{T,1},density::Float64=-1.)
+function get_colink_coefficients(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},ncolinks::Array{T,1},density::Float64=-1.) where {T<:Unsigned}
 	vs = vertices(g)
 	n = length(vs)
 	ccs = zeros(Float64,n)
@@ -434,7 +432,7 @@ end
 
 
 # get inclist from adjlist
-function get_inclist_from_adjlist{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}})
+function get_inclist_from_adjlist(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}) where {T<:Unsigned}
 	g2 = inclist(vertices(g), is_directed=true)
 	for u in vertices(g)
 		for v in out_neighbors(u,g)
@@ -445,7 +443,7 @@ function get_inclist_from_adjlist{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T
 end
 
 # get sparse adjacency matrix
-function get_sparse_adj_matrix{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}})
+function get_sparse_adj_matrix(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}) where {T<:Unsigned}
 	I = Array{T,1}()
 	J = Array{T,1}()
 	V = Array{Float64,1}()
@@ -461,7 +459,7 @@ function get_sparse_adj_matrix{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1}
 end
 
 # get P = D^-1 A matrix
-function get_sparse_P_matrix{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}})
+function get_sparse_P_matrix(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}) where {T<:Unsigned}
 	I = Array{T,1}()
 	J = Array{T,1}()
 	V = Array{Float64,1}()

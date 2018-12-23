@@ -2,7 +2,7 @@ include("../utils.jl")
 include("../io.jl")
 include("../graphs.jl")
 
-@Logging.configure(level=INFO)
+#Logging.configure(level=INFO)
 
 ###
 # loading and exporting datasets
@@ -16,6 +16,7 @@ if dataset == "amazon"
 	g = adjlist(UInt32, is_directed=true)
 	load_adjacency_list_from_csv(UInt32, g, "../datasets/Amazon_0601/Amazon0601.txt")
 	@info("# vertices:", length(vertices(g)))
+	g = adjlist(UInt32, is_directed=true)
 	@info("# edges:", num_edges(g))
 
 	@info("getting core")

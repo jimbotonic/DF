@@ -1,8 +1,6 @@
 include("../io.jl")
 include("../graphs.jl")
 
-@Logging.configure(level=DEBUG)
-
 g = adjlist(UInt32, is_directed=true)
 
 filename = ARGS[1]

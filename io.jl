@@ -1,6 +1,6 @@
 #
 # JCNL: Julia Complex Networks Library
-# Copyright (C) 2016-2017  Jimmy Dubuisson <jimmy.dubuisson@gmail.com>
+# Copyright (C) 2016-2019  Jimmy Dubuisson <jimmy.dubuisson@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -71,7 +71,7 @@ function serialize_to_jld(x::Any, name::AbstractString, filename::AbstractString
 end
 
 # get the ordered dictionary vid -> startpos
-function load_mgs1_graph_index{T<:Unsigned}(ipos::OrderedDict{T,T},filename::AbstractString)
+function load_mgs1_graph_index(ipos::OrderedDict{T,T},filename::AbstractString) where {T<:Unsigned}
 	f = open(filename, "r")
 	while !eof(f1)
 		id = read(f,UInt8,sizeof(T))
@@ -83,7 +83,7 @@ function load_mgs1_graph_index{T<:Unsigned}(ipos::OrderedDict{T,T},filename::Abs
 end
 
 # get the set of positions
-function load_mgs2_graph_index{T<:Unsigned}(pos::Array{T,1},filename::AbstractString)
+function load_mgs2_graph_index(pos::Array{T,1},filename::AbstractString) where {T<:Unsigned}
 	f = open(filename, "r")
 	while !eof(f)
 		p = read(f,UInt8,sizeof(T))
@@ -93,7 +93,7 @@ function load_mgs2_graph_index{T<:Unsigned}(pos::Array{T,1},filename::AbstractSt
 end
 
 # write index file
-function write_mgs1_graph_index{T<:Unsigned}(ipos::OrderedDict{T,T}, filename::AbstractString)
+function write_mgs1_graph_index(ipos::OrderedDict{T,T}, filename::AbstractString) where {T<:Unsigned}
 	f = open(filename, "w")
 	for p in ipos
     # reinterpret pair (vid,pos) in an array of bytes
@@ -104,7 +104,7 @@ function write_mgs1_graph_index{T<:Unsigned}(ipos::OrderedDict{T,T}, filename::A
 end
 
 # write index file
-function write_mgs2_graph_index{T<:Unsigned}(pos::Array{T,1}, filename::AbstractString)
+function write_mgs2_graph_index(pos::Array{T,1}, filename::AbstractString) where {T<:Unsigned}
 	f = open(filename, "w")
 	for p in pos
     # reinterpret pos in an array of bytes
@@ -115,7 +115,7 @@ function write_mgs2_graph_index{T<:Unsigned}(pos::Array{T,1}, filename::Abstract
 end
 
 # get the array of graph children (MGSv1 & MGSv2)
-function load_graph_data{T<:Unsigned}(children::Array{T,1},filename::AbstractString)
+function load_graph_data(children::Array{T,1},filename::AbstractString) where {T<:Unsigned}
 	f = open(filename, "r")
 	while !eof(f)
 		child = read(f,UInt8,sizeof(T))
@@ -125,7 +125,7 @@ function load_graph_data{T<:Unsigned}(children::Array{T,1},filename::AbstractStr
 end
 
 # write the array of graph children (MGSv1 & MGSv2)
-function write_graph_data{T<:Unsigned}(children::Array{T,1}, filename::AbstractString)
+function write_graph_data(children::Array{T,1}, filename::AbstractString) where {T<:Unsigned}
 	f = open(filename, "w")
 	for c in children
 		bytes = reinterpret(UInt8, [c])
@@ -135,7 +135,7 @@ function write_graph_data{T<:Unsigned}(children::Array{T,1}, filename::AbstractS
 end
 
 # load graph in format MGS v1
-function load_mgs1_graph{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},name::AbstractString)
+function load_mgs1_graph(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},name::AbstractString) where {T<:Unsigned}
 	ipos = OrderedDict{T,T}()
 	children = T[]
 
@@ -181,7 +181,7 @@ function load_mgs1_graph{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array
 end
 
 # load graph in format MGS v2
-function load_mgs2_graph{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},name::AbstractString)
+function load_mgs2_graph(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},name::AbstractString) where {T<:Unsigned}
 	pos = T[]
 	children = T[]
 
@@ -218,7 +218,7 @@ function load_mgs2_graph{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array
 end
 
 # load graph in format MGS v3
-function write_mgs3_graph{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, filename::AbstractString)
+function write_mgs3_graph(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, filename::AbstractString) where {T<:Unsigned}
   	# Header 12 bytes: 
 	# -> version: 7 bytes string
 	# -> size T: 1 byte
@@ -268,25 +268,25 @@ function write_mgs3_graph{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Arra
 end
 
 # load graph in format MGS v3
-function load_mgs3_graph{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, filename::AbstractString)
+function load_mgs3_graph(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, filename::AbstractString) where {T<:Unsigned}
 	f = open(filename, "r")
 	### read header
 	# 7-bytes version
-	version = read(f,UInt8,7)
+	version = read(f,7)
 	# size in bytes of T
-	size_t = convert(UInt8, read(f,UInt8,1)[1])
+	size_t = convert(UInt8, read(f,1)[1])
 	# number of vertices
-	gs = reinterpret(UInt32, read(f,UInt8,4))[1]
+	gs = reinterpret(UInt32, read(f,4))[1]
 	# read index
 	pos = T[]
 	for i in 1:gs
-		p = read(f,UInt8,sizeof(T))
+		p = read(f,sizeof(T))
 		push!(pos,reinterpret(T,p)[1])
 	end
 	# read data
 	children = T[]
 	while !eof(f)
-		c = read(f,UInt8,sizeof(T))
+		c = read(f,sizeof(T))
 		push!(children, reinterpret(T,c)[1])
 	end
 	close(f)
@@ -318,7 +318,7 @@ function load_mgs3_graph{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array
 end
 
 # load graph in format MGS v4
-function write_mgs4_graph{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, filename::AbstractString)
+function write_mgs4_graph(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, filename::AbstractString) where {T<:Unsigned}
   	# 8 bytes: 7 bytes string + 1 byte: 'MGSv4  ' + <8bits T size>
 	# 4 bytes (32bits): offset in size_t of graph data section (i.e. # of vertices)
   	version = 0x4d475376342020
@@ -422,37 +422,37 @@ function write_mgs4_graph{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Arra
 end
 
 # load graph in format MGS v4
-function load_mgs4_graph{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, filename::AbstractString)
+function load_mgs4_graph(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, filename::AbstractString) where {T<:Unsigned}
 	f = open(filename, "r")
 	### read header
   	# 8 bytes: 7 bytes string + 1 byte: 'MGSv4  ' + <8bits T size>
 	# 4 bytes (32bits): offset in size_t of graph data section (i.e. # of vertices)
 	#
 	# 7-bytes version
-	version = read(f,UInt8,7)
+	version = read(f,7)
 	# size in bytes of T
-	size_t = convert(UInt8, read(f,UInt8,1)[1])
+	size_t = convert(UInt8, read(f,1)[1])
 	# number of vertices
-	gs = reinterpret(UInt32, read(f,UInt8,4))[1]
+	gs = reinterpret(UInt32, read(f,4))[1]
 	
 	# read frequency section
 	F = T[]
 	for i in 1:gs
-		p = read(f,UInt8,sizeof(T))
+		p = read(f,sizeof(T))
 		push!(F,reinterpret(T,p)[1])
 	end
 	
 	# read index section
 	pos = T[]
 	for i in 1:gs
-		p = read(f,UInt8,sizeof(T))
+		p = read(f,sizeof(T))
 		push!(pos,reinterpret(T,p)[1])
 	end
 
 	# read data section
 	CDATA = BitArray{1}()
 	while !eof(f)
-		b = read(f,UInt8,1)[1]
+		b = read(f,1)[1]
 		for j in 0:7
 			if ((b >> j) & 0x01) == 1
 				push!(CDATA,true)
@@ -505,7 +505,7 @@ function load_mgs4_graph{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array
 end
 
 # load graph from CSV adjacency list
-function load_adjacency_list_from_csv{T<:Unsigned}(::Type{T}, g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, filename::AbstractString, separator::Char=' ')
+function load_adjacency_list_from_csv(::Type{T}, g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, filename::AbstractString, separator::Char=' ') where {T<:Unsigned}
 	f = open(filename,"r")
 	oni = Dict{T,T}()
 	edges = Array{Tuple{T,T},1}()
@@ -542,7 +542,7 @@ function load_adjacency_list_from_csv{T<:Unsigned}(::Type{T}, g::GenericAdjacenc
 end
 
 # load net Pajek file
-function load_graph_from_pajek{T<:Unsigned}(::Type{T}, g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, filename::AbstractString)
+function load_graph_from_pajek(::Type{T}, g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, filename::AbstractString) where {T<:Unsigned}
 	f = open(filename,"r")
 	inside_vertices_section = false
 	inside_edges_section = false
@@ -570,7 +570,7 @@ function load_graph_from_pajek{T<:Unsigned}(::Type{T}, g::GenericAdjacencyList{T
 end
 
 # load triangles list from CSV text-formatted file 
-function load_triangles{T<:Unsigned}(::Type{T}, filename::AbstractString)
+function load_triangles(::Type{T}, filename::AbstractString) where {T<:Unsigned}
 	f = open(filename,"r")
 	a = (T,T,T)[]
 	while !eof(f)

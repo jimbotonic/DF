@@ -2,9 +2,7 @@ include("../utils.jl")
 include("../io.jl")
 include("../graphs.jl")
 
-using Base.Test
-
-@Logging.configure(level=INFO)
+#using Base.Test
 
 ###
 # sorting algorithms
@@ -24,7 +22,7 @@ R2 = quicksort_iterative!(A2)
 # permutation array
 PA = [5,7,1,3,2,4,6,9,8]
 
-@test R == R2 == PA
+@assert R == R2 == PA
 
 # sorted arrays
 SA1 = [1,2,3,4,6,7,9,10,12] 
@@ -39,8 +37,8 @@ S2 = get_sorted_array(A,R,false)
 @info("sorted array (increasing): ", S)
 @info("sorted array (decreasing): ", S2)
 
-@test S == SA1
-@test S2 == SA2
+@assert S == SA1
+@assert S2 == SA2
 
 @info("##########")
 

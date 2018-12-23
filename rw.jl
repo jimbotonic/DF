@@ -1,6 +1,6 @@
 #
 # JCNL: Julia Complex Networks Library
-# Copyright (C) 2016-2017  Jimmy Dubuisson <jimmy.dubuisson@gmail.com>
+# Copyright (C) 2016-2019  Jimmy Dubuisson <jimmy.dubuisson@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@ using Graphs
 # proceeds for n_steps starting from the specified vertex id
 #
 # @return the list of visited nodes
-function RW{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, n_steps::UInt64, starting_v::T=convert(T,1))
+function RW(g::GenericAdjacencyList{T, Array{T,1}, Array{Array{T,1},1}}, n_steps::UInt64, starting_v::T=convert(T,1)) where {T<:Unsigned}
 	visited_nodes =  T[]
 	v = starting_v
 	for i in 1:n_steps
@@ -37,7 +37,7 @@ end
 # proceeds until a sink node is reached or if rand()>jumping_constant from the specified vertex id
 #
 # @return an array vid position -> # visits
-function RW_aggregated{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, jumping_constant::Float64, starting_v::T=convert(T,1))
+function RW_aggregated(g::GenericAdjacencyList{T, Array{T,1}, Array{Array{T,1},1}}, jumping_constant::Float64, starting_v::T=convert(T,1)) where {T<:Unsigned}
 	vv =  zeros(UInt32,length(vertices(g)))
 	v = starting_v
 	vv[v] = 1
@@ -56,7 +56,7 @@ end
 # proceeds for n_steps starting from the specified vertex id
 #
 # @return an array vid position -> # visits
-function RW_aggregated{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, n_steps::UInt64, starting_v::T=convert(T,1))
+function RW_aggregated(g::GenericAdjacencyList{T, Array{T,1}, Array{Array{T,1},1}}, n_steps::UInt64, starting_v::T=convert(T,1)) where {T<:Unsigned}
 	vv =  zeros(UInt32,length(vertices(g)))
 	v = starting_v
 	vv[v] = 1
@@ -74,7 +74,7 @@ end
 # proceeds for n_steps 
 #
 # @return the list of sampled vertices
-function US{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, n_steps::UInt64)
+function US(g::GenericAdjacencyList{T, Array{T,1}, Array{Array{T,1},1}}, n_steps::UInt64) where {T<:Unsigned}
 	visited_nodes =  T[]
 	n = length(vertices(g))
 	for i in 1:n_steps
@@ -106,7 +106,7 @@ end
 #
 # rd: stochastic repulsive vector
 # @return an array vid position -> # visits
-function ARW{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, n_steps::UInt64, rd::Array{Float64,1}, starting_v::T=convert(T,1))
+function ARW(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, n_steps::UInt64, rd::Array{Float64,1}, starting_v::T=convert(T,1)) where {T<:Unsigned}
 	visited_nodes =  T[]
 	v = starting_v
 	push!(visited_nodes,v)
@@ -141,7 +141,7 @@ end
 #
 # @input rd: stochastic repulsive vector
 # @return an array vid position -> # visits
-function ARW_flying{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, n_steps::UInt64, rd::Array{Float64,1}, starting_v::T=convert(T,1))
+function ARW_flying(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, n_steps::UInt64, rd::Array{Float64,1}, starting_v::T=convert(T,1)) where {T<:Unsigned}
 	visited_nodes =  T[]
 	v = starting_v
 	push!(visited_nodes,v)
@@ -168,7 +168,7 @@ end
 # NB: but in the case of directed graphs, the strategy to adopt is less clear
 #
 # @return an array vid position -> # visits
-function MHRW{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, n_steps::UInt64, in_degrees::Array{T,1}, out_degrees::Array{T,1},starting_v::T=convert(T,1))
+function MHRW(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, n_steps::UInt64, in_degrees::Array{T,1}, out_degrees::Array{T,1},starting_v::T=convert(T,1)) where {T<:Unsigned}
 	visited_nodes =  T[]
 	v = starting_v
 	push!(visited_nodes,v)
@@ -201,7 +201,7 @@ end
 # Metropolis-Hasting Random Walk (flying mode)
 #
 # @return an array vid position -> # visits
-function MHRW_flying{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, n_steps::UInt64, in_degrees::Array{T,1}, out_degrees::Array{T,1},starting_v::T=convert(T,1))
+function MHRW_flying(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, n_steps::UInt64, in_degrees::Array{T,1}, out_degrees::Array{T,1},starting_v::T=convert(T,1)) where {T<:Unsigned}
 	visited_nodes =  T[]
 	v = starting_v
 	push!(visited_nodes,v)
@@ -228,7 +228,7 @@ end
 # RW in flying mode guided by the colink (C1C) or clustering (C2C) coefficient
 #
 # Twitter dataset: nchains: 100, burning_time: 100, nsteps: 5000
-function CC_MHRW_flying{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, n_steps::UInt64, ccs::Array{Float64,1}, starting_v::T=convert(T,1))
+function CC_MHRW_flying(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, n_steps::UInt64, ccs::Array{Float64,1}, starting_v::T=convert(T,1)) where {T<:Unsigned}
 	visited_nodes =  T[]
 	v = starting_v
 	push!(visited_nodes,v)
@@ -252,7 +252,7 @@ function CC_MHRW_flying{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{
 				# NB: mv could be set to the minimum, 0 or 1
 				mv = maximum(scores)
 				# set -1 entries to mv value
-				scores = map(x->x==-1?mv:x,scores)
+				scores = map(x->x==-1 ? mv : x, scores)
 				# normalize vector
 				scores = stochastic(scores)
 			# all entries are equal to 0
@@ -277,7 +277,7 @@ function CC_MHRW_flying{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{
 end
 
 # explore a ball centered around starting vertex with a modified random walk
-function get_CC_MHRW_flying_ball{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, n_vertices::T, ccs::Array{Float64,1}, starting_v::T=convert(T,1),jumping_constant::Float64=0.)
+function get_CC_MHRW_flying_ball(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, n_vertices::T, ccs::Array{Float64,1}, starting_v::T=convert(T,1),jumping_constant::Float64=0.) where {T<:Unsigned}
 	visited_nodes =  Set{T}()
 	v = starting_v
 	push!(visited_nodes, v)
@@ -302,7 +302,7 @@ function get_CC_MHRW_flying_ball{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,
 				# NB: mv could be set to the minimum, 0 or 1
 				mv = maximum(scores)
 				# set -1 entries to mv value
-				scores = map(x->x==-1?mv:x,scores)
+				scores = map(x->x==-1 ? mv : x, scores)
 			else
 				# all entries are equal
 				scores = float64(ones(length(diff)))/length(diff)
@@ -343,7 +343,7 @@ function get_CC_MHRW_flying_ball{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,
 				# NB: mv could be set to the minimum, 0 or 1
 				mv = maximum(vns)
 				# set -1 entries to mv value
-				vns = map(x->x==-1?mv:x,vns)
+				vns = map(x->x==-1 ? mv : x, vns)
 			else
 				# all entries are equal
 				vns = float64(ones(length(vns)))/length(vns)

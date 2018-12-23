@@ -1,6 +1,6 @@
 #
 # JCNL: Julia Complex Networks Library
-# Copyright (C) 2016-2017  Jimmy Dubuisson <jimmy.dubuisson@gmail.com>
+# Copyright (C) 2016-2019  Jimmy Dubuisson <jimmy.dubuisson@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
 
 include("rw.jl")
 
-using Graphs, DataStructures, Logging, Distances
+using Graphs, DataStructures, Logging, Distances, SparseArrays
 
 DAMPING_FACTOR = 0.85
 EPSILON = 1e-6
@@ -25,7 +25,7 @@ EPSILON = 1e-6
 ###
 
 # simple implementation of Pagerank algorithm
-function PR{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}; init_pr::Array{Float64,1}=Float64[], damping::Float64=DAMPING_FACTOR, epsilon::Float64=EPSILON)
+function PR(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}; init_pr::Array{Float64,1}=Float64[], damping::Float64=DAMPING_FACTOR, epsilon::Float64=EPSILON) where {T<:Unsigned}
 	vs = vertices(g)
 	n = length(vs)
 	@info("computing Pagerank (size of graph $n)")
@@ -61,7 +61,7 @@ end
 # simple implementation of Pagerank algorithm
 #
 # specifically designed for large graphs
-function PR{T<:Unsigned}(rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, out_degrees::Array{T,1}; init_pr::Array{Float64,1}=Float64[], damping::Float64=DAMPING_FACTOR, epsilon::Float64=EPSILON, save_pr::Bool=False)
+function PR(rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, out_degrees::Array{T,1}; init_pr::Array{Float64,1}=Float64[], damping::Float64=DAMPING_FACTOR, epsilon::Float64=EPSILON, save_pr::Bool=False) where {T<:Unsigned}
 	vs = vertices(rg)
 	n = length(vs)
 	@info("computing Pagerank (size of graph $n)")
@@ -108,7 +108,7 @@ function PR{T<:Unsigned}(rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},
 end
 
 # simple implementation of personalized Pagerank with a single source vertex
-function PPR{T<:Unsigned}(src::T, g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}; damping::Float64=DAMPING_FACTOR, epsilon::Float64=EPSILON)
+function PPR(src::T, g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}; damping::Float64=DAMPING_FACTOR, epsilon::Float64=EPSILON) where {T<:Unsigned}
 	vs = vertices(g)
 	n = length(vs)
 	@info("computing personalized Pagerank (size of graph $n, source $src)")
@@ -148,7 +148,7 @@ end
 
 # MC Pagerank with cyclic start of complete path stopping at sink nodes
 # http://www-sop.inria.fr/members/Konstantin.Avratchenkov/pubs/mc.pdf
-function PR{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, n_cycles::Int; damping::Float64=DAMPING_FACTOR, epsilon::Float64=EPSILON)
+function PR(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, n_cycles::Int; damping::Float64=DAMPING_FACTOR, epsilon::Float64=EPSILON) where {T<:Unsigned}
 	vs = vertices(g)
 	n = length(vs)
 	vv = zeros(Float64, n)
@@ -169,7 +169,7 @@ end
 #
 # ppr: personalized distribution of random jumps
 # init_pr: initial Pagerank
-function PR{T<:Unsigned}(P::SparseMatrixCSC{Float64,T}; ppr::Array{Float64,1}=Float64[], init_pr::Array{Float64,1}=Float64[], damping::Float64=DAMPING_FACTOR, epsilon::Float64=EPSILON)
+function PR(P::SparseMatrixCSC{Float64,T}; ppr::Array{Float64,1}=Float64[], init_pr::Array{Float64,1}=Float64[], damping::Float64=DAMPING_FACTOR, epsilon::Float64=EPSILON) where {T<:Unsigned}
 	n = size(P)[1]
 	# initialize personalized vector
 	if length(ppr) != n

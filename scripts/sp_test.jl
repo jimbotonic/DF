@@ -4,7 +4,10 @@ include("../graphs.jl")
 include("../pr.jl")
 include("../rw.jl")
 
-@Logging.configure(level=INFO)
+using Statistics
+
+# override mkindx in a_star_spath.jl
+#mkindx(t) = typeof(t) == UInt32 ? t : t.index
 
 ###
 # shortest distance

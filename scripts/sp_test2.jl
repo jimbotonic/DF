@@ -4,9 +4,7 @@ include("../graphs.jl")
 include("../pr.jl")
 include("../rw.jl")
 
-@Logging.configure(level=INFO)
-
-function get_sp_greedy{T<:Unsigned}(s::T, t::T, g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, df::Array{Float64,1}, max_length::Int64)
+function get_sp_greedy(s::T, t::T, g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, df::Array{Float64,1}, max_length::Int64) where {T<:Unsigned}
 	@info("searching shortest path (greedy approach) between vertices $s and $t")
 	# current vertex
 	cv = s
@@ -21,7 +19,7 @@ function get_sp_greedy{T<:Unsigned}(s::T, t::T, g::GenericAdjacencyList{T,Array{
 			@info("--- explored path: ", sp)
 			break
 		end
-		cv = nnei[indmax(df[nnei])]
+		cv = nnei[findmax(df[nnei])[2]]
 
 		# a path was found
 		if cv == t
@@ -33,7 +31,7 @@ function get_sp_greedy{T<:Unsigned}(s::T, t::T, g::GenericAdjacencyList{T,Array{
 	return sp
 end
 
-function get_sp_proba{T<:Unsigned}(s::T, t::T, g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, df::Array{Float64,1}, max_length::Int64, max_iter::Int64)
+function get_sp_proba(s::T, t::T, g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, df::Array{Float64,1}, max_length::Int64, max_iter::Int64) where {T<:Unsigned}
 	@info("searching shortest path (probabilistic approach) between vertices $s and $t")
 	# array of paths
 	sps = Array{Array{T,1},1}()
@@ -127,6 +125,7 @@ ml = 20
 
 sp = UInt32[]
 
+# counters
 tc = 0
 sc = 0
 sc2 = 0
@@ -156,7 +155,7 @@ for t in UInt32(2):UInt32(100)
 
 	if PROBA
 		if length(sps) > 0
-			mi = indmin(Int64[length(a) for a in sps])
+			mi = findmin(Int64[length(a) for a in sps])[2]
 			sp = sps[mi]
 		else
 			sp = UInt32[]

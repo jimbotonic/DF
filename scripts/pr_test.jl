@@ -2,8 +2,6 @@ include("../graphs.jl")
 include("../io.jl")
 include("../pr.jl")
 
-@Logging.configure(level=DEBUG)
-
 # load graph in MGSv3 format
 core = adjlist(UInt32, is_directed=true)
 load_mgs3_graph(core, "../datasets/Arxiv_HEP-PH/Arxiv_HEP-PH_core.mgs")
