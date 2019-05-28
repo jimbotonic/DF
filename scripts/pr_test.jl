@@ -35,7 +35,7 @@ t = convert(UInt32,100)
 
 ## matrix computation
 @info("getting P matrix")
-P = get_sparse_P_matrix(core)
+@time P = get_sparse_P_matrix(core)
 
 @info("compute Pagerank (power iteration)")
 ppr = zeros(Float64,n)

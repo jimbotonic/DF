@@ -44,11 +44,11 @@ paths = enumerate_paths(vertices(core2), r.parent_indices, [10,100])
 paths = enumerate_paths(vertices(core2), r.parent_indices, [10,100])
 @info("shortest paths from vertex 1 to vertices 10 and 100: ", convert(Array{Array{Int64,1},1}, paths))
 
-@info("computing A* from node 1 to vertex 100")
-@time r = shortest_path(core2, dists, s, t)
-@info("shortest path from vertex 1 to vertex 100: ", r)
+#@info("computing A* from node 1 to vertex 100")
+#@time r = shortest_path(core2, dists, s, t)
+#@info("shortest path from vertex 1 to vertex 100: ", r)
 
-@info("getting P for core")
+@info("getting P for core and rcore")
 P_core = get_sparse_P_matrix(core)
 P_rcore = get_sparse_P_matrix(rcore)
 
@@ -85,17 +85,22 @@ sp = UInt32[]
 
 # greedy approach
 while length(sp) < ml
+	global cv
 	@debug("adding vertex: ", cv)
+	# add new vertex to the path
 	push!(sp,cv)
+	# get neighbors not already in the path
 	nei = out_neighbors(cv,core)
 	nnei = setdiff(nei,sp)
+	# we reached a dead end...
 	if length(nnei) == 0
 		@info("--- exploration reached a dead end")
 		@info("--- explored path: ", sp)
 		break
 	end
-	cv = nnei[indmax(df[nnei])]
-	#cv = nei[indmax(df_boost[nnei])]
+	# find the neighbor with highest DF value
+	cv = nnei[findmax(df[nnei])[2]]
+	#cv = nei[findmax(df_boost[nnei])[2]]
 
 	# we found a path
 	if cv == t
@@ -117,8 +122,11 @@ cv = s
 # search in a probabilistic way shortest paths between s and t
 c = 0
 max_iter = 1e3
+
 while c < max_iter
+	global c
 	while length(sp) < ml 
+		global sp, cv
 		@debug("adding vertex: ", cv)
 		push!(sp,cv)
 		nei = out_neighbors(cv,core)
