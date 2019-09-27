@@ -15,7 +15,7 @@
 
 using Graphs, DataStructures, Logging
 
-include("algorithms.jl")
+include("algo.jl")
 
 ###
 # Basic stats for directed graphs
