@@ -1,6 +1,6 @@
 #
 # JCNL: Julia Complex Networks Library
-# Copyright (C) 2016-2019  Jimmy Dubuisson <jimmy.dubuisson@gmail.com>
+# Copyright (C) 2016-2020 Jimmy Dubuisson <jimmy.dubuisson@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -280,23 +280,23 @@ function load_mgs3_graph(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1
 	# read index
 	pos = T[]
 	for i in 1:gs
-		p = read(f,sizeof(T))
-		push!(pos,reinterpret(T,p)[1])
+		p = read(f, sizeof(T))
+		push!(pos, reinterpret(T,p)[1])
 	end
 	# read data
 	children = T[]
 	while !eof(f)
-		c = read(f,sizeof(T))
+		c = read(f, sizeof(T))
 		push!(children, reinterpret(T,c)[1])
 	end
 	close(f)
 	
 	# vertex set
-	vs = range(1,length(pos))
+	vs = range(1, stop=length(pos))
 
 	# add vertices
 	for i in 1:length(vs)
-        	add_vertex!(g,convert(T,i))
+        	add_vertex!(g, convert(T,i))
 	end
 
 	# add edges

@@ -1,6 +1,6 @@
 #
 # JCNL: Julia Complex Networks Library
-# Copyright (C) 2016-2019  Jimmy Dubuisson <jimmy.dubuisson@gmail.com>
+# Copyright (C) 2016-2020 Jimmy Dubuisson <jimmy.dubuisson@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@ using Graphs, DataStructures, Logging, Distances, SparseArrays
 
 DAMPING_FACTOR = 0.85
 EPSILON = 1e-6
+MAX_ITER = 100
 
 ###
 # Simple graph based Pagerank algorithm
@@ -58,9 +59,7 @@ function PR(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, rg::Gener
 	return pr
 end
 
-# simple implementation of Pagerank algorithm
-#
-# specifically designed for large graphs
+# Simple implementation of Pagerank algorithm (designed for large graphs)
 function PR(rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, out_degrees::Array{T,1}; init_pr::Array{Float64,1}=Float64[], damping::Float64=DAMPING_FACTOR, epsilon::Float64=EPSILON, save_pr::Bool=False) where {T<:Unsigned}
 	vs = vertices(rg)
 	n = length(vs)
@@ -71,7 +70,7 @@ function PR(rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, out_degr
 	else
 		pr = Float64[1/n for k in vs]
 	end
-	pr2 = zeros(Float64,n)
+	pr2 = zeros(Float64, n)
 	# iteration number
 	ic = 1
 	# progression
@@ -107,7 +106,7 @@ function PR(rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, out_degr
 	return pr
 end
 
-# simple implementation of personalized Pagerank with a single source vertex
+# Simple implementation of personalized Pagerank with a single source vertex
 function PPR(src::T, g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}; damping::Float64=DAMPING_FACTOR, epsilon::Float64=EPSILON) where {T<:Unsigned}
 	vs = vertices(g)
 	n = length(vs)
@@ -115,7 +114,7 @@ function PPR(src::T, g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}, 
 	# initialize pagerank vector
 	pr = [0. for k in vs]
 	pr[src] = 1.
-	pr2 = zeros(Float64,n)
+	pr2 = zeros(Float64, n)
 	while true
 		for v in vs
 			nv = 0.
@@ -169,7 +168,7 @@ end
 #
 # ppr: personalized distribution of random jumps
 # init_pr: initial Pagerank
-function PR(P::SparseMatrixCSC{Float64,T}; ppr::Array{Float64,1}=Float64[], init_pr::Array{Float64,1}=Float64[], damping::Float64=DAMPING_FACTOR, epsilon::Float64=EPSILON) where {T<:Unsigned}
+function PR(P::SparseMatrixCSC{Float64,T}; ppr::Array{Float64,1}=Float64[], init_pr::Array{Float64,1}=Float64[], damping::Float64=DAMPING_FACTOR, epsilon::Float64=EPSILON, max_iter::Int=MAX_ITER) where {T<:Unsigned}
 	n = size(P)[1]
 	# initialize personalized vector
 	if length(ppr) != n
@@ -181,8 +180,9 @@ function PR(P::SparseMatrixCSC{Float64,T}; ppr::Array{Float64,1}=Float64[], init
 	else
 		pr = init_pr
 	end
-	pr2 = Float64[]
-	while true
+	pr2 = zeros(Float64, n)
+    i = 0
+	while i < max_iter
 		#pr2 = (damping*pr'*P + (1-damping)*ppr')'
 		pr2 = damping*P'*pr + (1-damping)*ppr
 		d = chebyshev(pr,pr2)
@@ -191,6 +191,39 @@ function PR(P::SparseMatrixCSC{Float64,T}; ppr::Array{Float64,1}=Float64[], init
 			break
 		end
 		pr = copy(pr2)
+        i += 1
+	end
+	return pr
+
+end
+
+# compute non-linear Pagerank (Power iteration method)
+#
+# ppr: personalized distribution of random jumps
+# init_pr: initial Pagerank
+function PR(P::SparseMatrixCSC{Float64,T}, fun::Function; ppr::Array{Float64,1}=Float64[], init_pr::Array{Float64,1}=Float64[], damping::Float64=DAMPING_FACTOR, epsilon::Float64=EPSILON, max_iter::Int=MAX_ITER) where {T<:Unsigned}
+	n = size(P)[1]
+	# initialize personalized vector
+	if length(ppr) != n
+		ppr = Float64[1/n for i in 1:n]
+	end
+	# initialize Pagerank vector
+	if length(init_pr) != n
+		pr = Float64[1/n for i in 1:n]
+	else
+		pr = init_pr
+	end
+	pr2 = zeros(Float64, n)
+    i = 0
+	while i < max_iter
+		pr2 = fun.(damping*P'*pr + (1-damping)*ppr)
+		d = chebyshev(pr,pr2)
+		if d <= epsilon
+			pr = pr2
+			break
+		end
+		pr = copy(pr2)
+        i += 1
 	end
 	return pr
 
