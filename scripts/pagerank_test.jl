@@ -13,9 +13,9 @@
 # GNU General Public License for more details.
 #
 
-include("../graph.jl")
-include("../io.jl")
-include("../pr.jl")
+include("../src/graph.jl")
+include("../src/io.jl")
+include("../src/pr.jl")
 
 # load graph in MGSv3 format
 core = adjlist(UInt32, is_directed=true)

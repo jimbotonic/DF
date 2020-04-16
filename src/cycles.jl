@@ -15,8 +15,10 @@
 
 using Graphs, DataStructures, Logging
 
-# get the list of colinks
-function list_colinks{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},filename::String)
+"""
+Get the list of colinks
+"""
+function list_colinks(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},filename::String) where {T<:Unsigned}
 	vs = vertices(g)
 	n = length(vs)
 	io = T[]
@@ -58,8 +60,10 @@ function list_colinks{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Ar
 	close(f)
 end
 
-# listing triangles - map
-function list_triangles_map{T<:Unsigned}(v::T,g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},dpos::Dict{T,T})
+"""
+List triangles - map
+"""
+function list_triangles_map(v::T,g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},dpos::Dict{T,T}) where {T<:Unsigned}
 	candidates = (T,T,T)[]
 	gc = filter(x->dpos[x]>dpos[v],out_neighbors(v,g))
 	gp = filter(x->dpos[x]>dpos[v],out_neighbors(v,rg))
@@ -75,8 +79,12 @@ function list_triangles_map{T<:Unsigned}(v::T,g::GenericAdjacencyList{T,Array{T,
 	return candidates
 end
 
-# listing triangles - reduce
-function list_triangles_reduce{T<:Unsigned}(candidates::Array{(T,T,T),1},g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},io::Array{T,1})
+"""
+    list_triangles_reduce(candidates::Array{(T,T,T),1},g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},io::Array{T,1}) where {T<:Unsigned}
+
+list triangles - reduce
+"""
+function list_triangles_reduce(candidates::Array{Tuple{T,T,T},1},g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},io::Array{T,1}) where {T<:Unsigned}
 	count = convert(T,0)
 	for c in candidates
 		cc = out_neighbors(convert(T,c[2]),g)
@@ -89,8 +97,10 @@ function list_triangles_reduce{T<:Unsigned}(candidates::Array{(T,T,T),1},g::Gene
 	return count
 end
 
-# listing triangles - map&reduce
-function list_triangles_mapreduce{T<:Unsigned}(v::T,g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},dpos::Dict{T,T},io::Array{T,1})
+"""
+List triangles - map&reduce
+"""
+function list_triangles_mapreduce(v::T,g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},dpos::Dict{T,T},io::Array{T,1}) where {T<:Unsigned}
 	count = convert(T,0)
 	vpos = dpos[v]
 	gc = filter(x->dpos[x]>vpos,out_neighbors(v,g))
@@ -112,8 +122,10 @@ function list_triangles_mapreduce{T<:Unsigned}(v::T,g::GenericAdjacencyList{T,Ar
 	return count
 end
 
-# initialize un2 (# of colink candidates) and un3 (# of triangle candidates) array
-function init_un23_arrays{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},dpos::Dict{T,T})
+"""
+Initialize un2 (# of colink candidates) and un3 (# of triangle candidates) array
+"""
+function init_un23_arrays(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},dpos::Dict{T,T}) where {T<:Unsigned}
 	@debug("initializing # colink candidates + # triangle candidates arrays")
 	vs = vertices(g)
 	n = length(vs)
@@ -137,8 +149,10 @@ function init_un23_arrays{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Arra
 	return un2,un3
 end
 
-# initialize mn2 (maximum # of colinks) and mn3 (maximum # of triangles) array
-function init_mn23_arrays{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}})
+"""
+Initialize mn2 (maximum # of colinks) and mn3 (maximum # of triangles) array
+"""
+function init_mn23_arrays(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}}) where {T<:Unsigned}
 	@debug("initializing max # colinks + max # triangles arrays")
 	vs = vertices(g)
 	n = length(vs)
@@ -159,8 +173,10 @@ function init_mn23_arrays{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Arra
 	return mn2,mn3
 end
 
-# get the list of triangles
-function list_triangles{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},filename::String)
+"""
+Get the list of triangles
+"""
+function list_triangles(g::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},rg::GenericAdjacencyList{T,Array{T,1},Array{Array{T,1},1}},filename::String) where {T<:Unsigned}
 	n = length(vertices(g))
 	io = T[]
 	# actual number of unique triangles
@@ -224,7 +240,7 @@ function list_triangles{T<:Unsigned}(g::GenericAdjacencyList{T,Array{T,1},Array{
 end
 
 # load the colinks distribution from the specified file
-function load_colinks_distribution{T<:Unsigned}(size::T,filename::String)
+function load_colinks_distribution(size::T,filename::String) where {T<:Unsigned}
 	f = open(filename,"r")
 	d = Dict{T,T}()
 	while !eof(f)
@@ -254,7 +270,7 @@ function load_colinks_distribution{T<:Unsigned}(size::T,filename::String)
 end
 
 # load the triangles distribution from the specified file
-function load_triangles_distribution{T<:Unsigned}(size::T,filename::String)
+function load_triangles_distribution(size::T,filename::String) where {T<:Unsigned}
 	f = open(filename,"r")
 	d = Dict{T,T}()
 	while !eof(f)
